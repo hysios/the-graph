@@ -1,0 +1,188 @@
+<link rel="import" href="../the-graph/the-graph.html">
+
+<dom-module id="the-graph-editor" attributes="grid snap width height autolayout theme selectedNodes errorNodes selectedEdges animatedEdges onContextMenu displaySelectionGroup forceSelection"
+  touch-action="none">
+  <template>
+    <the-graph id="graph" name="{{ graph.properties.name }}" graph="{{fbpGraph}}" menus="{{menus}}" width="{{width}}" height="{{height}}"
+      pan="{{pan}}" scale="{{scale}}" autolayout="{{autolayout}}" theme="{{theme}}" selectedNodes="{{selectedNodes}}" errorNodes="{{errorNodes}}"
+      selectedEdges="{{selectedEdges}}" animatedEdges="{{animatedEdges}}" displaySelectionGroup="{{displaySelectionGroup}}"
+      forceSelection="{{forceSelection}}" getMenuDef="{{getMenuDef}}">
+    </the-graph>
+  </template>
+  <script>
+    class TheGraphEditor extends Polymer.Element {
+      static get is() {
+        return 'the-graph-editor'
+      }
+
+      static get properties() {
+        return {
+          graph: null,
+          grid: 72,
+          snap: 36,
+          width: 800,
+          height: 600,
+          scale: 1,
+          plugins: {},
+          fbpGraph: null,
+          menus: null,
+          autolayout: false,
+          theme: "dark",
+          selectedNodes: [],
+          copyNodes: [],
+          errorNodes: {},
+          selectedEdges: [],
+          animatedEdges: [],
+          displaySelectionGroup: true,
+          forceSelection: false
+        }
+      }
+      constructor() {
+        this.pan = [0, 0];
+        this.menus = TheGraph.editor.getDefaultMenus(this);
+      }
+      ready() {}
+      connectedCallback() {}
+      disconnectedCallback() {
+        for (var name in this.plugins) {
+          this.plugins[name].unregister(this);
+          delete this.plugins[name];
+        }
+      }
+      addPlugin(name, plugin) {
+        this.plugins[name] = plugin;
+        plugin.register(this);
+      }
+      addMenu(type, options) {
+        // options: icon, label
+        this.menus[type] = options;
+      }
+      addMenuCallback(type, callback) {
+        if (!this.menus[type]) {
+          return;
+        }
+        this.menus[type].callback = callback;
+      }
+      addMenuAction(type, direction, options) {
+        if (!this.menus[type]) {
+          this.menus[type] = {};
+        }
+        var menu = this.menus[type];
+        menu[direction] = options;
+      }
+      getMenuDef(options) {
+        // Options: type, graph, itemKey, item
+        if (options.type && this.menus[options.type]) {
+          var defaultMenu = this.menus[options.type];
+          if (defaultMenu.callback) {
+            return defaultMenu.callback(defaultMenu, options);
+          }
+          return defaultMenu;
+        }
+        return null;
+      }
+      widthChanged() {
+        this.style.width = this.width + "px";
+      }
+      heightChanged() {
+        this.style.height = this.height + "px";
+      }
+      graphChanged() {
+        if (typeof this.graph.addNode === 'function') {
+          this.buildInitialLibrary(this.graph);
+          this.fbpGraph = this.graph;
+          return;
+        }
+
+        var fbpGraph;
+        if ('fbpGraph' in window) {
+          fbpGraph = window.fbpGraph;
+        }
+        if (!fbpGraph && 'require' in window) {
+          fbpGraph = require('fbp-graph');
+        }
+        if (!fbpGraph) {
+          console.warn(
+            'Missing fbp-graph dependency! Should be built with Webpack/Browserify to require it, or accessible on window'
+          );
+          return;
+        }
+
+        fbpGraph.graph.loadJSON(this.graph, function (err, graph) {
+          this.buildInitialLibrary(graph);
+          this.fbpGraph = graph;
+          this.fire('graphInitialised', this);
+        }.bind(this));
+      }
+      buildInitialLibrary(fbpGraph) {
+        /*if (Object.keys(this.$.graph.library).length !== 0) {
+          // We already have a library, skip
+          // TODO what about loading a new graph? Are we making a new editor?
+          return;
+        }*/
+        var components = TheGraph.library.componentsFromGraph(fbpGraph);
+        components.forEach(function (component) {
+          this.registerComponent(component, true);
+        }.bind(this));
+      }
+      registerComponent(definition, generated) {
+        this.$.graph.registerComponent(definition, generated);
+      }
+      libraryRefresh() {
+        this.$.graph.debounceLibraryRefesh();
+      }
+      updateIcon(nodeId, icon) {
+        this.$.graph.updateIcon(nodeId, icon);
+      }
+      rerender() {
+        this.$.graph.rerender();
+      }
+      triggerAutolayout() {
+        this.$.graph.triggerAutolayout();
+      }
+      triggerFit() {
+        this.$.graph.triggerFit();
+      }
+      animateEdge(edge) {
+        // Make sure unique
+        var index = this.animatedEdges.indexOf(edge);
+        if (index === -1) {
+          this.animatedEdges.push(edge);
+        }
+      }
+      unanimateEdge(edge) {
+        var index = this.animatedEdges.indexOf(edge);
+        if (index >= 0) {
+          this.animatedEdges.splice(index, 1);
+        }
+      }
+      addErrorNode(id) {
+        this.errorNodes[id] = true;
+        this.updateErrorNodes();
+      }
+      removeErrorNode(id) {
+        this.errorNodes[id] = false;
+        this.updateErrorNodes();
+      }
+      clearErrorNodes() {
+        this.errorNodes = {};
+        this.updateErrorNodes();
+      }
+      updateErrorNodes() {
+        this.$.graph.errorNodesChanged();
+      }
+      focusNode(node) {
+        this.$.graph.focusNode(node);
+      }
+      getComponent(name) {
+        return this.$.graph.getComponent(name);
+      }
+      getLibrary() {
+        return this.$.graph.library;
+      }
+      toJSON() {
+        return this.fbpGraph.toJSON();
+      }
+    }
+  </script>
+</dom-module>

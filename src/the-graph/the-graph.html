@@ -41,11 +41,11 @@
           forceSelection: false,
           offsetY: null,
           offsetX: null,
-
-          debounceLibraryRefeshTimer: null,
         }
       }
       constructor() {
+        super()
+        this.debounceLibraryRefeshTimer = null;
         this.library = {};
         // Default pan
         this.pan = [0, 0];
@@ -56,7 +56,7 @@
         });
       }
 
-      ready() {
+      connectedCallback() {
         this.themeChanged();
       }
 
