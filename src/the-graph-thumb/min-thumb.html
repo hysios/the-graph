@@ -1,0 +1,30 @@
+<dom-module id="min-thumb">
+  <template>
+    <h1>thumb</h1>
+  </template>
+  <script>
+    class MinThumb extends Polymer.Element {
+      static get is() {
+        return 'min-thumb'
+      }
+      static get properties() {
+        return {}
+      }
+
+      constructor() {
+        super()
+        this.listener = null
+        this.log('created')
+      }
+
+      log(...args) {
+        console.log('the-graph-thumb', ...args)
+      }
+
+      connectedCallback() {
+        this.log('connected')
+      }
+
+    }
+  </script>
+</dom-module>

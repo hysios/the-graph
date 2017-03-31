@@ -4,8 +4,7 @@
 * Autoscales the render to fit, and exposes the scale as thumbscale, thumbrectangle, viewrectangle
 
 -->
-
-<dom-module id="the-graph-thumb" attributes="graph width height thumbscale thumbrectangle theme">
+<dom-module id="the-graph-thumb">
   <template>
     <canvas id="canvas" width="{{width}}" height="{{height}}" style="position:absolute;top:0;left:0;"></canvas>
   </template>
@@ -18,36 +17,70 @@
       static get properties() {
         return {
           graph: null,
-          width: 200,
-          height: 150,
-          thumbscale: 1,
-          nodeSize: 60,
-          fillStyle: "hsl(184, 8%, 10%)",
-          strokeStyle: "hsl(180, 11%, 70%)",
-          lineWidth: 0.75,
-          theme: "dark",
-          edgeColors: [
-            "white",
-            "hsl(  0, 100%, 46%)",
-            "hsl( 35, 100%, 46%)",
-            "hsl( 60, 100%, 46%)",
-            "hsl(135, 100%, 46%)",
-            "hsl(160, 100%, 46%)",
-            "hsl(185, 100%, 46%)",
-            "hsl(210, 100%, 46%)",
-            "hsl(285, 100%, 46%)",
-            "hsl(310, 100%, 46%)",
-            "hsl(335, 100%, 46%)"
-          ]
+          width: {
+            type: Number,
+            value: 200
+          },
+          height: {
+            type: Number,
+            value: 150
+          },
+          thumbscale: {
+            type: Number,
+            value: 1
+          },
+          nodeSize: {
+            type: Number,
+            value: 60
+          },
+          fillStyle: {
+            type: String,
+            value: "hsl(184, 8%, 10%)"
+          },
+          strokeStyle: {
+            type: String,
+            value: "hsl(180, 11%, 70%)"
+          },
+          lineWidth: {
+            type: Number,
+            value: 0.75
+          },
+          theme: {
+            type: String,
+            value: "dark"
+          },
+          edgeColors: {
+            type: Array,
+            value: [
+              "white",
+              "hsl(  0, 100%, 46%)",
+              "hsl( 35, 100%, 46%)",
+              "hsl( 60, 100%, 46%)",
+              "hsl(135, 100%, 46%)",
+              "hsl(160, 100%, 46%)",
+              "hsl(185, 100%, 46%)",
+              "hsl(210, 100%, 46%)",
+              "hsl(285, 100%, 46%)",
+              "hsl(310, 100%, 46%)",
+              "hsl(335, 100%, 46%)"
+            ]
+          }
         }
       }
-      contructor() {
+      constructor() {
         super()
         this.listener = null
         this.thumbrectangle = [0, 0, 500, 500];
         this.viewrectangle = [0, 0, 200, 150];
+        this.log('created')
       }
+
+      log(...args) {
+        console.log('the-graph-thumb', ...args)
+      }
+
       connectedCallback() {
+        this.log('connected')
         this.style.width = this.width + "px";
         this.style.height = this.height + "px";
         this.themeChanged();
