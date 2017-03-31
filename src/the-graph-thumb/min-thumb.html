@@ -1,6 +1,7 @@
 <dom-module id="min-thumb">
   <template>
     <h1>thumb</h1>
+    <h3>BLIP BLAP</h3>
   </template>
   <script>
     class MinThumb extends Polymer.Element {
@@ -10,21 +11,25 @@
       static get properties() {
         return {}
       }
-
       constructor() {
         super()
-        this.listener = null
         this.log('created')
       }
 
+      // https://www.polymer-project.org/2.0/docs/devguide/registering-elements
+      ready() {
+        super.ready()
+        this.log('ready')
+      }
+
       log(...args) {
-        console.log('the-graph-thumb', ...args)
+        console.log('min-thumb', ...args)
       }
 
       connectedCallback() {
         this.log('connected')
       }
-
     }
+    window.customElements.define(MinThumb.is, MinThumb);
   </script>
 </dom-module>

@@ -1,0 +1,159 @@
+<!--
+
+* Renders a fbp-graph instance into a canvas
+* Autoscales the render to fit, and exposes the scale as thumbscale, thumbrectangle, viewrectangle
+
+-->
+<dom-module id="the-graph-thumb">
+  <template>
+    <canvas id="canvas" width="{{width}}" height="{{height}}" style="position:absolute;top:0;left:0;"></canvas>
+  </template>
+  <script>
+    class TheGraphThumb extends Polymer.Element {
+      static get is() {
+        return 'the-graph-thumb'
+      }
+
+      static get properties() {
+        return {
+          graph: null,
+          width: {
+            type: Number,
+            value: 200
+          },
+          height: {
+            type: Number,
+            value: 150
+          },
+          thumbscale: {
+            type: Number,
+            value: 1
+          },
+          nodeSize: {
+            type: Number,
+            value: 60
+          },
+          fillStyle: {
+            type: String,
+            value: "hsl(184, 8%, 10%)"
+          },
+          strokeStyle: {
+            type: String,
+            value: "hsl(180, 11%, 70%)"
+          },
+          lineWidth: {
+            type: Number,
+            value: 0.75
+          },
+          theme: {
+            type: String,
+            value: "dark"
+          },
+          edgeColors: {
+            type: Array,
+            value: [
+              "white",
+              "hsl(  0, 100%, 46%)",
+              "hsl( 35, 100%, 46%)",
+              "hsl( 60, 100%, 46%)",
+              "hsl(135, 100%, 46%)",
+              "hsl(160, 100%, 46%)",
+              "hsl(185, 100%, 46%)",
+              "hsl(210, 100%, 46%)",
+              "hsl(285, 100%, 46%)",
+              "hsl(310, 100%, 46%)",
+              "hsl(335, 100%, 46%)"
+            ]
+          }
+        }
+      }
+      constructor() {
+        super()
+        this.log('created')
+      }
+
+      ready() {
+        super.ready()
+        this.listener = null
+        this.thumbrectangle = [0, 0, 500, 500];
+        this.viewrectangle = [0, 0, 200, 150];
+        this.log('ready')
+      }
+
+      log(...args) {
+        console.log('the-graph-thumb', ...args)
+      }
+
+      connectedCallback() {
+        this.log('connected')
+        this.style.width = this.width + "px";
+        this.style.height = this.height + "px";
+        // this.themeChanged();
+      }
+      /*
+            themeChanged() {
+              var style = TheGraph.thumb.styleFromTheme(this.theme);
+              this.edgeColors = style.edgeColors;
+              this.fillStyle = style.fill;
+              this.strokeStyle = style.stroke;
+              // Redraw
+              this.redrawGraph();
+            }
+
+            redrawGraph() {
+              if (!this.graph) {
+                return;
+              }
+              var context = this.$.canvas.getContext("2d");
+              if (!context) {
+                // ???
+                setTimeout(this.redrawGraph.bind(this), 500);
+                return;
+              }
+              // Need the actual context, not polymer-wrapped one
+              context = unwrap(context);
+
+              var properties = {
+                width: this.width,
+                height: this.height,
+                edgeColors: this.edgeColors,
+                nodeSize: this.nodeSize,
+                strokeStyle: this.strokeStyle,
+                fillStyle: this.fillStyle,
+                lineWidth: this.lineWidth,
+              };
+              var thumb = TheGraph.thumb.render(context, this.graph, properties);
+
+              this.thumbrectangle = thumb.rectangle;
+              this.thumbscale = thumb.scale;
+            }
+
+            graphChanged(oldGraph, newGraph) {
+              if (!this.listener) {
+                this.listener = this.redrawGraph.bind(this);
+              }
+              if (oldGraph) {
+                oldGraph.removeListener('endTransaction', this.listener);
+              }
+              if (!this.graph) {
+                return;
+              }
+              this.graph.on('endTransaction', this.listener);
+              this.redrawGraph();
+            }
+            widthChanged() {
+              this.style.width = this.width + "px";
+              this.redrawGraph();
+            }
+            heightChanged() {
+              this.style.height = this.height + "px";
+              this.redrawGraph();
+            }
+            toDataURL() {
+              return this.$.canvas.toDataURL();
+            }
+            */
+    }
+    window.customElements.define(TheGraphThumb.is, TheGraphThumb);
+  </script>
+</dom-module>
