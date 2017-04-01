@@ -22,7 +22,7 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
 <link rel="import" href="../bower_components/paper-icon-button/paper-icon-button.html">
 <link rel="import" href="my-icons.html">
 <link rel="import" href="/src/custom-element.html">
-<link rel="import" href="/src/the-graph-thumb/min-thumb.html">
+<link rel="import" href="/src/the-graph/the-graph.html">
 <link rel="import" href="/src/the-graph-thumb/the-graph-thumb.html">
 
 <dom-module id="my-app">
@@ -89,9 +89,8 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
             <div main-title>My App</div>
           </app-toolbar>
         </app-header>
-        <min-thumb></min-thumb>
+        <the-graph></the-graph>
         <the-graph-thumb></the-graph-thumb>
-        <custom-element></custom-element>
 
         <iron-pages selected="[[page]]" attr-for-selected="name" fallback-selection="view404" role="main">
           <my-view1 name="view1"></my-view1>

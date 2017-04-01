@@ -48,26 +48,23 @@
           theme: {
             type: String,
             value: "dark"
+          },
+          edgeColors: {
+            type: Array,
+            value: [
+              "white",
+              "hsl(  0, 100%, 46%)",
+              "hsl( 35, 100%, 46%)",
+              "hsl( 60, 100%, 46%)",
+              "hsl(135, 100%, 46%)",
+              "hsl(160, 100%, 46%)",
+              "hsl(185, 100%, 46%)",
+              "hsl(210, 100%, 46%)",
+              "hsl(285, 100%, 46%)",
+              "hsl(310, 100%, 46%)",
+              "hsl(335, 100%, 46%)"
+            ]
           }
-          /*
-            edgeColors: {
-              type: Array,
-              value: [
-                "white",
-                "hsl(  0, 100%, 46%)",
-                "hsl( 35, 100%, 46%)",
-                "hsl( 60, 100%, 46%)",
-                "hsl(135, 100%, 46%)",
-                "hsl(160, 100%, 46%)",
-                "hsl(185, 100%, 46%)",
-                "hsl(210, 100%, 46%)",
-                "hsl(285, 100%, 46%)",
-                "hsl(310, 100%, 46%)",
-                "hsl(335, 100%, 46%)"
-              ]
-            }
-          }
-          */
         }
       }
       constructor() {
@@ -77,11 +74,12 @@
 
       ready() {
         super.ready()
+        this.log('ready')
         this.graph = null
         this.listener = null
         this.thumbrectangle = [0, 0, 500, 500];
         this.viewrectangle = [0, 0, 200, 150];
-        this.log('ready')
+        this.log('done ready')
       }
 
       log(...args) {
@@ -89,74 +87,75 @@
       }
 
       attached() {
-        this.log('connected')
+        this.log('attached')
         this.style.width = this.width + "px";
         this.style.height = this.height + "px";
-        // this.themeChanged();
+        this.themeChanged();
       }
-      /*
-            themeChanged() {
-              var style = TheGraph.thumb.styleFromTheme(this.theme);
-              this.edgeColors = style.edgeColors;
-              this.fillStyle = style.fill;
-              this.strokeStyle = style.stroke;
-              // Redraw
-              this.redrawGraph();
-            }
 
-            redrawGraph() {
-              if (!this.graph) {
-                return;
-              }
-              var context = this.$.canvas.getContext("2d");
-              if (!context) {
-                // ???
-                setTimeout(this.redrawGraph.bind(this), 500);
-                return;
-              }
-              // Need the actual context, not polymer-wrapped one
-              context = unwrap(context);
+      themeChanged() {
+        this.log('themeChanged')
+        var style = TheGraph.thumb.styleFromTheme(this.theme);
+        this.edgeColors = style.edgeColors;
+        this.fillStyle = style.fill;
+        this.strokeStyle = style.stroke;
+        // Redraw
+        this.redrawGraph();
+      }
 
-              var properties = {
-                width: this.width,
-                height: this.height,
-                edgeColors: this.edgeColors,
-                nodeSize: this.nodeSize,
-                strokeStyle: this.strokeStyle,
-                fillStyle: this.fillStyle,
-                lineWidth: this.lineWidth,
-              };
-              var thumb = TheGraph.thumb.render(context, this.graph, properties);
+      redrawGraph() {
+        this.log('redrawGraph')
+        if (!this.graph) {
+          return;
+        }
+        var context = this.$.canvas.getContext("2d");
+        if (!context) {
+          // ???
+          setTimeout(this.redrawGraph.bind(this), 500);
+          return;
+        }
+        // Need the actual context, not polymer-wrapped one
+        context = unwrap(context);
 
-              this.thumbrectangle = thumb.rectangle;
-              this.thumbscale = thumb.scale;
-            }
+        var properties = {
+          width: this.width,
+          height: this.height,
+          edgeColors: this.edgeColors,
+          nodeSize: this.nodeSize,
+          strokeStyle: this.strokeStyle,
+          fillStyle: this.fillStyle,
+          lineWidth: this.lineWidth,
+        };
+        var thumb = TheGraph.thumb.render(context, this.graph, properties);
 
-            graphChanged(oldGraph, newGraph) {
-              if (!this.listener) {
-                this.listener = this.redrawGraph.bind(this);
-              }
-              if (oldGraph) {
-                oldGraph.removeListener('endTransaction', this.listener);
-              }
-              if (!this.graph) {
-                return;
-              }
-              this.graph.on('endTransaction', this.listener);
-              this.redrawGraph();
-            }
-            widthChanged() {
-              this.style.width = this.width + "px";
-              this.redrawGraph();
-            }
-            heightChanged() {
-              this.style.height = this.height + "px";
-              this.redrawGraph();
-            }
-            toDataURL() {
-              return this.$.canvas.toDataURL();
-            }
-            */
+        this.thumbrectangle = thumb.rectangle;
+        this.thumbscale = thumb.scale;
+      }
+
+      graphChanged(oldGraph, newGraph) {
+        if (!this.listener) {
+          this.listener = this.redrawGraph.bind(this);
+        }
+        if (oldGraph) {
+          oldGraph.removeListener('endTransaction', this.listener);
+        }
+        if (!this.graph) {
+          return;
+        }
+        this.graph.on('endTransaction', this.listener);
+        this.redrawGraph();
+      }
+      widthChanged() {
+        this.style.width = this.width + "px";
+        this.redrawGraph();
+      }
+      heightChanged() {
+        this.style.height = this.height + "px";
+        this.redrawGraph();
+      }
+      toDataURL() {
+        return this.$.canvas.toDataURL();
+      }
     }
     window.customElements.define(TheGraphThumb.is, TheGraphThumb);
   </script>

@@ -5,6 +5,12 @@
   ],
   "license": "https://polymer.github.io/LICENSE.txt",
   "dependencies": {
+    "font-awesome": "~4.6.3",
+    "hammerjs": "~2.0.8",
+    "klayjs-noflo": "~0.3.0",
+    "react": "0.14.3",
+    "react.animate-djdeath": "0.0.3",
+
     "app-layout": "PolymerElements/app-layout#2.0-preview",
     "app-route": "PolymerElements/app-route#2.0-preview",
     "iron-flex-layout": "PolymerElements/iron-flex-layout#2.0-preview",
