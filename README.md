@@ -2,6 +2,64 @@
 
 [![Build Status](https://travis-ci.org/PolymerElements/polymer-starter-kit.svg?branch=master)](https://travis-ci.org/PolymerElements/polymer-starter-kit)
 
+## Running The Graph
+
+1 Clone repo
+2 Install [latest Poymer CLI](https://www.polymer-project.org/2.0/docs/tools/polymer-cli) npm and bower
+3 Install dependencies
+4 Build `dist/the-graph.js`
+
+### Install global binaries
+
+```
+npm install npm@latest -g
+npm install -g polymer-cli@next
+npm install -g bower
+```
+
+### Install dependencies
+
+```
+npm install
+bower install
+```
+
+### Build
+
+`npm run build`
+
+### Serve
+
+Start server `polymer serve`
+
+Open browser `http://127.0.0.1:8081/examples/demo-network.html`
+
+Check browser console output.
+
+### Gotchas
+
+Main issues left should be in the .html files of the `/examples` folder
+
+[equivalent to polymer-ready event](http://stackoverflow.com/questions/30667685/is-there-an-equivelent-to-the-polymer-ready-event-in-polymer-1-0)
+
+Change old pre 1.0 Polymer callback `polymer-ready`
+
+```js
+window.addEventListener('polymer-ready', function (e) {
+```
+
+To use sth like `WebComponentsReady` (CE v1 compatible?) or maybe just [document ready](http://stackoverflow.com/questions/9899372/pure-javascript-equivalent-to-jquerys-ready-how-to-call-a-function-when-the)
+
+```html
+  <script type="text/javascript">
+    // Polymer.veiledElements = ["the-graph-editor"];
+    window.addEventListener('WebComponentsReady', function (e) {
+```
+
+It loads but no graph is displayed. More debugging needed...
+
+## Polymer project
+
 This template is a starting point for building apps using a drawer-based
 layout. The layout is provided by `app-layout` elements.
 

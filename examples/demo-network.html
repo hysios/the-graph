@@ -98,9 +98,7 @@
   </div>
   <script type="text/javascript">
     // Polymer.veiledElements = ["the-graph-editor"];
-    window.addEventListener('polymer-ready', function () {
-      "use strict";
-
+    window.addEventListener('WebComponentsReady', function (e) {
       // Remove loading message
       var loadingMessage = document.getElementById("loading-message");
       loadingMessage.innerHTML = "loading graph data...";
