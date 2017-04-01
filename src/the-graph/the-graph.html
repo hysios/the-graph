@@ -3,8 +3,8 @@
 
   <template>
     <h3>the graph</h3>
-    <link rel="stylesheet" href="../themes/the-graph-dark.css">
-    <link rel="stylesheet" href="../themes/the-graph-light.css">
+    <link rel="stylesheet" href="themes/the-graph-dark.css">
+    <link rel="stylesheet" href="themes/the-graph-light.css">
     <div id="svgcontainer"></div>
   </template>
 
@@ -33,29 +33,71 @@
             type: Number,
             value: 1
           },
-          /*
-          minZoom: 0.15,
-          maxZoom: 15,
-          appView: null,
-          graphView: null,
-          editable: true,
-          autolayout: false,
-          grid: 72,
-          snap: 36,
-          theme: "dark",
-          selectedNodes: [],
-          selectedNodesHash: {},
-          errorNodes: {},
-          selectedEdges: [],
-          animatedEdges: [],
-          autolayouter: null,
-          displaySelectionGroup: true,
-          forceSelection: false,
-          offsetY: null,
-          offsetX: null,
-          */
+          minZoom: {
+            type: Number,
+            value: 0.15
+          },
+          maxZoom: {
+            type: Number,
+            value: 15
+          },
+          // appView: null,
+          // graphView: null,
+          editable: {
+            type: Boolean,
+            value: true
+          },
+          autolayout: {
+            type: Boolean,
+            value: false
+          },
+          grid: {
+            type: Number,
+            value: 72
+          },
+          snap: {
+            type: Number,
+            value: 36
+          },
+          theme: {
+            type: String,
+            value: "dark"
+          },
+          selectedNodes: {
+            type: Array,
+            value: []
+          },
+          selectedNodesHash: {
+            type: Object,
+            value: {}
+          },
+          errorNodes: {
+            type: Object,
+            value: {}
+          },
+          selectedEdges: {
+            type: Array,
+            value: []
+          },
+          animatedEdges: {
+            type: Array,
+            value: []
+          },
+          // autolayouter: null,
+
+          displaySelectionGroup: {
+            type: Boolean,
+            value: true
+          },
+          forceSelection: {
+            type: Boolean,
+            value: false
+          }
+          // offsetY: null,
+          // offsetX: null,
         }
       }
+
       constructor() {
         super()
         this.log('create')
@@ -69,10 +111,10 @@
         // how to make it available globally!?
         // https://github.com/noflo/klayjs-noflo
 
-        // this.autolayouter = klayNoflo.init({
-        //   onSuccess: this.applyAutolayout.bind(this),
-        //   workerScript: "../node_modules/klayjs/klay.js"
-        // });
+        this.autolayouter = klayNoflo.init({
+          onSuccess: this.applyAutolayout.bind(this),
+          workerScript: "/src/klay.js"
+        });
         this.log('created')
       }
 
@@ -80,6 +122,7 @@
         console.log('the-graph-thumb', ...args)
       }
 
+      // TODO: perhaps try ready callback instead!?
       attached() {
         this.log('attached')
         this.themeChanged();
@@ -91,6 +134,7 @@
       }
 
       graphChanged(oldGraph, newGraph) {
+        this.log('graphChanged')
         if (oldGraph && oldGraph.removeListener) {
           oldGraph.removeListener("endTransaction", this.fireChanged);
         }
