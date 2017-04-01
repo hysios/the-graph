@@ -13,7 +13,7 @@
       }
       constructor() {
         super()
-        this.textContent = "I'm a min-thumb";
+        // this.textContent = "I'm a min-thumb";
         this.log('created')
       }
 
@@ -27,8 +27,8 @@
         console.log('min-thumb', ...args)
       }
 
-      connectedCallback() {
-        this.log('connected')
+      attached() {
+        this.log('attached')
       }
     }
     window.customElements.define(MinThumb.is, MinThumb);

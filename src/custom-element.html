@@ -18,9 +18,9 @@
         console.log('custom-element', ...args)
       }
 
-      // connectedCallback() {
-      //   this.log('connected')
-      // }
+      attached() {
+        this.log('attached')
+      }
     }
     // Register the new element with the browser
     customElements.define(CustomElement.is, CustomElement);
