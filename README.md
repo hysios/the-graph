@@ -32,6 +32,47 @@ We've recorded a Polycast to get you up and running with PSK2 fast!
   </a>
 </p>
 
+## The Graph
+
+The Graph currently uses Grunfile to build `dist/the-graph.js` to include in `index.html` and which includes all the React components used!!
+
+### Building
+
+Get dependencies and build:
+
+    npm install
+    npm run build
+
+
+```
+$ npm run build
+...
+Bundle dist/the-graph.js created.
+````
+
+However, also see `src/index.js` where `TheGraph` object is configured:
+
+`g.TheGraph.editor = require('./the-graph-editor/the-graph-editor.js');`
+
+ONLY PROBLEM NOW:
+
+`TheGraph.editor` is not exported so it is global, via `module.exports = g.TheGraph;`
+
+Trying to load from `index.html` like this:
+
+```html
+  <!-- Browserify Libraries -->
+  <script src="/dist/the-graph.js"></script>
+```
+
+
+
+### Running
+
+    npm start
+
+
+
 ### Setup
 
 ##### Prerequisites

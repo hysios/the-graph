@@ -1,26 +1,21 @@
-<dom-module id="the-graph" attributes="graph menus library width height autolayout theme selectedNodes errorNodes selectedEdges animatedEdges getMenuDef pan scale maxZoom minZoom displaySelectionGroup forceSelection offsetY offsetX"
+<dom-module id="the-graph-elem" attributes="graph menus library width height autolayout theme selectedNodes errorNodes selectedEdges animatedEdges getMenuDef pan scale maxZoom minZoom displaySelectionGroup forceSelection offsetY offsetX"
   touch-action="none">
 
   <template>
     <h3>the graph</h3>
-    <link rel="stylesheet" href="themes/the-graph-dark.css">
-    <link rel="stylesheet" href="themes/the-graph-light.css">
+    <link rel="stylesheet" href="../themes/the-graph-dark.css">
+    <link rel="stylesheet" href="../themes/the-graph-light.css">
     <div id="svgcontainer"></div>
   </template>
 
   <script>
-    class TheGraph extends Polymer.Element {
+    class TheGraphElem extends Polymer.Element {
       static get is() {
-        return 'the-graph'
+        return 'the-graph-elem'
       }
 
       static get properties() {
         return {
-          /*
-                    graph: null,
-                    library: null,
-                    menus: null,
-          */
           width: {
             type: Number,
             value: 800
@@ -41,8 +36,6 @@
             type: Number,
             value: 15
           },
-          // appView: null,
-          // graphView: null,
           editable: {
             type: Boolean,
             value: true
@@ -83,8 +76,6 @@
             type: Array,
             value: []
           },
-          // autolayouter: null,
-
           displaySelectionGroup: {
             type: Boolean,
             value: true
@@ -92,15 +83,29 @@
           forceSelection: {
             type: Boolean,
             value: false
+          },
+          offsetY: {
+            type: Number,
+            value: null
+          },
+          offsetX: {
+            type: Number,
+            value: null
           }
-          // offsetY: null,
-          // offsetX: null,
         }
       }
 
       constructor() {
         super()
         this.log('create')
+
+        // this.graph = null;
+        // this.library = null;
+        // this.menus = null;
+        // appView: null,
+        // graphView: null,
+        // autolayouter: null,
+
         this.debounceLibraryRefeshTimer = null;
         this.library = {};
         // Default pan
@@ -119,17 +124,18 @@
       }
 
       log(...args) {
-        console.log('the-graph-thumb', ...args)
+        console.log('the-graph', ...args)
       }
 
-      // TODO: perhaps try ready callback instead!?
-      attached() {
-        this.log('attached')
+      ready() {
+        super.ready()
+        this.log('ready')
         this.themeChanged();
       }
 
       themeChanged() {
         this.log('themeChanged')
+        // sets class of div#svgcontainer in template
         this.$.svgcontainer.className = "the-graph-" + this.theme;
       }
 
@@ -478,6 +484,6 @@
         return this.graph.toJSON();
       }
     }
-    window.customElements.define(TheGraph.is, TheGraph);
+    window.customElements.define(TheGraphElem.is, TheGraphElem);
   </script>
 </dom-module>

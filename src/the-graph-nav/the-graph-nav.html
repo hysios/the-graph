@@ -42,15 +42,46 @@
 
       static get properties() {
         return {
-          width: 200,
-          height: 150,
-          hide: false,
-          thumbscale: 1,
-          backgroundColor: "hsla(184, 8%, 75%, 0.9)",
-          outsideFill: "hsla(0, 0%, 0%, 0.4)"
+          width: {
+            type: Number,
+            value: 200
+          },
+          height: {
+            type: Number,
+            value: 150
+          },
+          hide: {
+            type: Boolean,
+            value: false
+          },
+          thumbscale: {
+            type: Number,
+            value: 1
+          },
+          backgroundColor: {
+            type: String,
+            value: "hsla(184, 8%, 75%, 0.9)"
+          },
+          outsideFill: {
+            type: String,
+            value: "hsla(0, 0%, 0%, 0.4)"
+          }
         }
       }
+
+      constructor() {
+        super()
+        this.log('created')
+      }
+
+      log(...args) {
+        console.log('the-graph-nav', ...args)
+      }
+
       ready() {
+        super.ready()
+        this.log('ready')
+
         this.viewrectangle = [0, 0, 500, 500];
         this.scaledviewrectangle = [0, 0, 200, 150];
         this.theme = "dark";
@@ -97,13 +128,15 @@
           this.editor.triggerFit();
         });
       }
-      observe: {
-        'editor.scale': 'editorScaleChanged',
-        'editor.width': 'editorWidthChanged',
-        'editor.height': 'editorHeightChanged',
-        'editor.pan': 'editorPanChanged',
-        'editor.theme': 'editorThemeChanged'
-      }
+
+      // observe: {
+      //   'editor.scale': 'editorScaleChanged',
+      //   'editor.width': 'editorWidthChanged',
+      //   'editor.height': 'editorHeightChanged',
+      //   'editor.pan': 'editorPanChanged',
+      //   'editor.theme': 'editorThemeChanged'
+      // }
+
       editorChanged(oldEditor, newEditor) {}
       editorPanChanged() {
         if (!this.editor.pan) {
@@ -171,5 +204,6 @@
         this.thumbscale = (w > h) ? this.width / w : this.height / h;
       }
     }
+    window.customElements.define(TheGraphNav.is, TheGraphNav);
   </script>
   </polymer-element>

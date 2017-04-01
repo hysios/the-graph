@@ -1,0 +1,155 @@
+---
+- service:
+  - network:     "dev"
+  - name:        "web"
+  - image:       "registry.webfg.com/apache:0.0.2"
+  - publish:     ""
+  - env:         "-e entorno=desarrollo -e proyecto=digitallook -e APACHE_LOG_DIR=/home/logs/"
+  - command:     ""
+  - constraint:  ""
+  - mount:       "\
+  --mount type=bind,src=/tmp/inframedia/media_project/php,dst=/home/html/media \
+  --mount type=bind,src=/tmp/inframedia/media_project/conf_nginx_apache/conf_apache/bolsamania/,dst=/home/scripts \
+  --mount type=bind,src=/tmp/inframedia/media_project/conf_nginx_apache/conf_apache/bolsamania/bolsamania_media_vhost.conf,dst=/etc/apache2/sites-enabled/bolsamania_vhost.conf \
+  --mount type=bind,src=/tmp/inframedia/media_project/conf_nginx_apache/conf_apache/bolsamania/entorno.media.bolsamania.com.conf,dst=/etc/apache2/sites-enabled/entorno.media.bolsamania.com.conf \
+  --mount type=bind,src=/tmp/inframedia/media_project/conf_nginx_apache/conf_apache/bolsamania/entorno.bolsamania.com.conf,dst=/etc/apache2/sites-enabled/entorno.bolsamania.com.conf"
+  - replicas:    "--replicas=1"
+  - hosts:       "--host=bd_desarrollo:192.168.0.177"
+- service:
+  - network:     "dev"
+  - name:        "web_symfony"
+  - image:       "registry.webfg.com/symfony:0.0.1"
+  - publish:     ""
+  - env:         ""
+  - command:     ""
+  - constraint:  ""
+  - mount:       "\
+--mount type=bind,src=/tmp/inframedia/media_project/php_bolsamania_symfony,dst=/home/html/bolsamaniav2 \
+--mount type=bind,src=/tmp/inframedia/media_project/php_symfony/symfony,dst=/usr/local/lib/php/symfony \
+--mount type=bind,src=/tmp/inframedia/media_project/php/bin/class/Framework.class.php,dst=/home/html/media/bin/class/Framework.class.php \
+--mount type=bind,src=/tmp/inframedia/media_project/php/bin/class/Section.class.php,dst=/home/html/media/bin/class/Section.class.php \
+--mount type=bind,src=/tmp/inframedia/media_project/php/bin/class/MetaInfo.class.php,dst=/home/html/media/bin/class/MetaInfo.class.php \
+--mount type=bind,src=/tmp/inframedia/media_project/php/lib/Layout.class.php,dst=/home/html/media/lib/Layout.class.php \
+--mount type=bind,src=/tmp/inframedia/media_project/php/lib/WebfgPublisherTag.class.php,dst=/home/html/media/lib/WebfgPublisherTag.class.php \
+--mount type=bind,src=/tmp/inframedia/media_project/php_webservices,dst=/home/html/webservices \
+--mount type=bind,src=/tmp/inframedia/media_project/php_performance,dst=/home/html/performance \
+--mount type=bind,src=/tmp/inframedia/media_project/conf_nginx_apache/conf_apache/bolsamania/,dst=/home/scripts \
+--mount type=bind,src=/tmp/inframedia/media_project/conf_nginx_apache/conf_apache/bolsamania/bolsamania_symfony_vhost.conf,dst=/etc/apache2/sites-enabled/bolsamania_vhost.conf \
+"
+  - replicas:    ""
+  - hosts:       "\
+--host=webservices.desarrollo:192.168.100.43 \
+--host=webservices.interno:192.168.0.202 \
+--host=db1.webfg.com:192.168.100.70 \
+--host=db1:192.168.100.70 \
+--host=db2.webfg.com:192.168.100.71 \
+--host=db2:192.168.100.71 \
+--host=db_desarrollo:192.168.100.71 \
+--host=db2-desarrollo:192.168.100.71 \
+--host=db3.webfg.com:192.168.100.72 \
+--host=db3:192.168.100.72 \
+--host=db4.webfg.com:192.168.100.79 \
+--host=db4:192.168.100.79 \
+--host=fidelity-db1:192.168.100.79 \
+--host=fidelity-db:192.168.100.79 \
+--host=db_Reuters:192.168.100.79 \
+--host=db_fondos:192.168.100.78 \
+--host=fondos:192.168.100.78 \
+--host=fondos_bdadmin:192.168.100.78 \
+--host=db_telekurs:192.168.100.76 \
+--host=db_credit_andorra:192.168.100.76 \
+--host=db_bpa:192.168.100.76 \
+--host=db_inversis:192.168.100.76 \
+--host=db-bm:192.168.0.177 \
+--host=db-bm-read1:192.168.0.177 \
+--host=db-bm-read2:192.168.0.177 \
+  "
+- service:
+  - network:     "dev"
+  - name:        "webservices_wfg"
+  - image:       "registry.webfg.com/webservices:0.0.1"
+  - publish:     ""
+  - env:         ""
+  - command:     ""
+  - constraint:  ""
+  - mount:       "\
+--mount type=bind,src=/tmp/inframedia/media_project/php_webservices,dst=/home/html/webservices \
+--mount type=bind,src=/tmp/inframedia/media_project/php_performance,dst=/home/html/performance \
+--mount type=bind,src=/tmp/inframedia/media_project/conf_nginx_apache/conf_apache/bolsamania/webservices_wfg.conf,dst=/etc/apache2/sites-enabled/webservices_wfg.conf \
+  "
+  - replicas:    ""
+  - hosts:       "\
+--host=db1.webfg.com:192.168.100.70 \
+--host=db1:192.168.100.70 \
+--host=db2.webfg.com:192.168.100.71 \
+--host=db2:192.168.100.71 \
+--host=db_desarrollo:192.168.100.71 \
+--host=db2-desarrollo:192.168.100.71 \
+--host=db3.webfg.com:192.168.100.72 \
+--host=db3:192.168.100.72 \
+--host=db4.webfg.com:192.168.100.79 \
+--host=db4:192.168.100.79 \
+--host=fidelity-db1:192.168.100.79 \
+--host=fidelity-db:192.168.100.79 \
+--host=db_Reuters:192.168.100.79 \
+--host=db_fondos:192.168.100.78 \
+--host=fondos:192.168.100.78 \
+--host=fondos_bdadmin:192.168.100.78 \
+--host=db_telekurs:192.168.100.76 \
+--host=db_credit_andorra:192.168.100.76 \
+--host=db_bpa:192.168.100.76 \
+ --host=db_inversis:192.168.100.76 \
+--host=db-bm:192.168.0.177 \
+--host=db-bm-read1:192.168.0.177 \
+--host=db-bm-read2:192.168.0.177 \
+"
+- service:
+  - network:     "dev"
+  - name:        "nginx"
+  - image:       "registry.webfg.com/nginx_alpine:0.0.1"
+  - publish:     "-p 80:80"
+  - env:         ""
+  - command:     ""
+  - constraint:  ""
+  - mount:       "\
+--mount type=bind,src=/tmp/inframedia/media_project/conf_nginx_apache/conf_nginx/bolsamania/conf.d/,dst=/etc/nginx/conf.d/ \
+--mount type=bind,src=/tmp/inframedia/media_project/conf_nginx_apache/conf_nginx/bolsamania/nginx.conf,dst=/etc/nginx/nginx.conf \
+"
+  - replicas:    "--replicas=1"
+  - hosts:       ""
+- service:
+  - network:     "dev"
+  - name:        "elasticsearch"
+  - image:       "registry.webfg.com/elasticsearch_alpine:0.0.1"
+  - publish:     ""
+  - env:         "-e ENTORNO=digitallook"
+  - command:     ""
+  - constraint:  ""
+  - mount:       "\
+--mount type=bind,src=/tmp/inframedia/media_project/conf_nginx_apache/conf_nginx/bolsamania/conf.d/,dst=/etc/nginx/conf.d/ \
+--mount type=bind,src=/tmp/inframedia/media_project/conf_nginx_apache/conf_nginx/bolsamania/nginx.conf,dst=/etc/nginx/nginx.conf \
+"
+  - replicas:    "--replicas=1"
+  - hosts:       ""
+- service:
+  - network:     "dev"
+  - name:        "memcached_1"
+  - image:       "registry.webfg.com/memcached_alpine:0.0.1"
+  - publish:     ""
+  - env:         ""
+  - command:     ""
+  - constraint:  ""
+  - mount:       ""
+  - replicas:    ""
+  - hosts:       ""
+- service:
+  - network:     "dev"
+  - name:        "memcached_2"
+  - image:       "registry.webfg.com/memcached_alpine:0.0.1"
+  - publish:     ""
+  - env:         ""
+  - command:     ""
+  - constraint:  ""
+  - mount:       ""
+  - replicas:    ""
+  - hosts:       ""

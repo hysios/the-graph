@@ -1,13 +1,15 @@
-<link rel="import" href="../the-graph/the-graph.html">
+<!-- NOTICE: include 'the-graph-elem'' used in template -->
+<link rel="import" href="../the-graph/the-graph-elem.html">
 
 <dom-module id="the-graph-editor" attributes="grid snap width height autolayout theme selectedNodes errorNodes selectedEdges animatedEdges onContextMenu displaySelectionGroup forceSelection"
   touch-action="none">
   <template>
-    <the-graph id="graph" name="{{ graph.properties.name }}" graph="{{fbpGraph}}" menus="{{menus}}" width="{{width}}" height="{{height}}"
+    <h1>Graph Editor</h1>
+    <the-graph-elem id="graph" name="{{ graph.properties.name }}" graph="{{fbpGraph}}" menus="{{menus}}" width="{{width}}" height="{{height}}"
       pan="{{pan}}" scale="{{scale}}" autolayout="{{autolayout}}" theme="{{theme}}" selectedNodes="{{selectedNodes}}" errorNodes="{{errorNodes}}"
       selectedEdges="{{selectedEdges}}" animatedEdges="{{animatedEdges}}" displaySelectionGroup="{{displaySelectionGroup}}"
       forceSelection="{{forceSelection}}" getMenuDef="{{getMenuDef}}">
-    </the-graph>
+    </the-graph-elem>
   </template>
   <script>
     class TheGraphEditor extends Polymer.Element {
@@ -17,33 +19,76 @@
 
       static get properties() {
         return {
-          graph: null,
-          grid: 72,
-          snap: 36,
-          width: 800,
-          height: 600,
-          scale: 1,
-          plugins: {},
-          fbpGraph: null,
-          menus: null,
-          autolayout: false,
-          theme: "dark",
-          selectedNodes: [],
-          copyNodes: [],
-          errorNodes: {},
-          selectedEdges: [],
-          animatedEdges: [],
-          displaySelectionGroup: true,
-          forceSelection: false
+          // graph: null,
+          grid: {
+            type: Number,
+            value: 72
+          },
+          snap: {
+            Number,
+            value: 36
+          },
+          width: {
+            Number,
+            value: 800
+          },
+          height: {
+            Number,
+            value: 600
+          },
+          scale: {
+            Number,
+            value: 1
+          },
+          // fbpGraph: null,
+          // menus: null,
+          autolayout: {
+            Boolean,
+            value: false
+          },
+          theme: {
+            String,
+            value: "dark"
+          },
+          displaySelectionGroup: {
+            Boolean,
+            value: true
+          },
+          forceSelection: {
+            Boolean,
+            value: false
+          }
         }
       }
+
       constructor() {
+        super()
+        this.log('create')
+        this.plugins = {}
+        this.selectedNodes = []
+        this.copyNodes = []
+        this.errorNodes = {}
+        this.selectedEdges = []
+        this.animatedEdges = []
+
         this.pan = [0, 0];
+
+        //
         this.menus = TheGraph.editor.getDefaultMenus(this);
       }
-      ready() {}
-      connectedCallback() {}
-      disconnectedCallback() {
+
+      log(...args) {
+        console.log('the-graph-editor', ...args)
+      }
+
+      ready() {
+        super.ready()
+        this.log('ready')
+      }
+
+      attached() {}
+
+      detached() {
         for (var name in this.plugins) {
           this.plugins[name].unregister(this);
           delete this.plugins[name];
@@ -184,5 +229,6 @@
         return this.fbpGraph.toJSON();
       }
     }
+    window.customElements.define(TheGraphEditor.is, TheGraphEditor);
   </script>
 </dom-module>

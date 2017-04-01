@@ -1,0 +1,16 @@
+---
+- service:
+  - network:     "dev"
+  - name:        "web"
+  - image:       "registry.webfg.com/apache:0.0.2"
+  - publish:     ""
+  - env:         "-e entorno=desarrollo -e proyecto=digitallook -e APACHE_LOG_DIR=/home/logs/"
+  - command:     ""
+  - constraint:  ""
+  - mount: |
+      \
+      --mount type=bind,src=/tmp/inframedia/media_project/php,dst=/home/html/media \
+      --mount type=bind,src=/tmp/inframedia/media_project/conf_nginx_apache/conf_apache/bolsamania/,dst=/home/scripts \
+      --mount type=bind,src=/tmp/inframedia/media_project/conf_nginx_apache/conf_apache/bolsamania/bolsamania_media_vhost.conf,dst=/etc/apache2/sites-enabled/bolsamania_vhost.conf \
+      --mount type=bind,src=/tmp/inframedia/media_project/conf_nginx_apache/conf_apache/bolsamania/entorno.media.bolsamania.com.conf,dst=/etc/apache2/sites-enabled/entorno.media.bolsamania.com.conf \
+      --mount type=bind,src=/tmp/inframedia/media_project/conf_nginx_apache/conf_apache/bolsamania/entorno.bolsamania.com.conf,dst=/etc/apache2/sites-enabled/entorno.bolsamania.com.conf
