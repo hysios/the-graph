@@ -10,8 +10,17 @@
       }
       constructor() {
         super();
-        this.textContent = "I'm a custom-element.";
+        // this.textContent = "I'm a custom-element.";
+        this.log('created')
       }
+
+      log(...args) {
+        console.log('custom-element', ...args)
+      }
+
+      // connectedCallback() {
+      //   this.log('connected')
+      // }
     }
     // Register the new element with the browser
     customElements.define(CustomElement.is, CustomElement);
