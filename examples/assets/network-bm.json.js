@@ -1,4 +1,5 @@
-loadGraph({
+console.log('loadGraph')
+var networkGraph = {
   "id": "ti6yn",
   "project": "",
   "properties": {
@@ -12,8 +13,7 @@ loadGraph({
   },
 
 
-  "groups": [
-    {
+  "groups": [{
       "name": "VM1",
       "nodes": ["memcache_1", "apache"],
       "metadata": {
@@ -23,7 +23,7 @@ loadGraph({
     },
     {
       "name": "VM2",
-      "nodes": [ "web/sympony", "web/services"],
+      "nodes": ["web/sympony", "web/services"],
       "metadata": {
         "description": "docker swarm",
         "color": 2
@@ -31,7 +31,7 @@ loadGraph({
     },
     {
       "name": "VM3",
-      "nodes": [ "elasticsearch", "nginx", "memcache_2"],
+      "nodes": ["elasticsearch", "nginx", "memcache_2"],
       "metadata": {
         "description": "docker swarm",
         "color": 3
@@ -100,8 +100,7 @@ loadGraph({
   },
 
 
-  "connections": [
-    {
+  "connections": [{
       "src": {
         "process": "memcache_1",
         "port": "element"
@@ -154,4 +153,7 @@ loadGraph({
       }
     }
   ]
-});
+}
+
+console.log('networkGraph', networkGraph)
+loadGraph(networkGraph);

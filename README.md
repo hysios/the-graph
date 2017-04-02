@@ -58,6 +58,49 @@ To use sth like `WebComponentsReady` (CE v1 compatible?) or maybe just [document
 
 It loads but no graph is displayed. More debugging needed...
 
+## Changes from 1.x to 2.x
+
+See [Changes](https://codelabs.developers.google.com/codelabs/polymer-2-carousel/index.html?index=..%2F..%2Findex#2)
+
+If you used Polymer 1.x, these callbacks look a little different, but they're mostly parallel with the Polymer 1.x callbacks:
+
+- `created` changes to `constructor`
+- `attached` changes to `connectedCallback`
+- `detached` changes to `disconnectedCallback`
+- `attributeChanged` changes to `attributeChangedCallback`
+
+Example:
+
+```js
+  connectedCallback() {
+    super.connectedCallback();
+  }
+```
+
+## Observe properties
+
+```js
+  return {
+    selected: {
+      type: Object,
+      observer: '_selectedChanged'
+    }
+  };
+```
+
+```js
+_selectedChanged(selected, oldSelected) {
+  if (oldSelected) oldSelected.removeAttribute('selected');
+  if (selected) selected.setAttribute('selected', '');
+}
+```
+
+## Getting started
+
+First read these articles!!
+
+- [Getting started with web components and Polymer 2.0](https://hackernoon.com/getting-started-with-web-components-and-polymer-2-0-part-1-9142d780d77e)
+- [Building a Polymer 2 carousel element](https://codelabs.developers.google.com/codelabs/polymer-2-carousel/index.html?index=..%2F..%2Findex#0)
 ## Polymer project
 
 This template is a starting point for building apps using a drawer-based

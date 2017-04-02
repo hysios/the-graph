@@ -17,45 +17,64 @@
         return 'the-graph-editor'
       }
 
+      // NOTE: properties passed in from network example
+      // width="800"
+      // height="600"
+      // grid="72"
       static get properties() {
         return {
-          // graph: null,
+          // property ??
+          graph: {
+            type: Object,
+            value: null,
+            observer: '_graphChanged'
+          },
           grid: {
             type: Number,
             value: 72
           },
           snap: {
-            Number,
+            type: Number,
             value: 36
           },
           width: {
-            Number,
-            value: 800
+            type: Number,
+            value: 800,
+            observer: '_widthChanged'
           },
           height: {
-            Number,
-            value: 600
+            type: Number,
+            value: 600,
+            observer: '_heightChanged'
           },
           scale: {
             Number,
             value: 1
           },
-          // fbpGraph: null,
-          // menus: null,
+          // property ??
+          fbpGraph: {
+            type: Object,
+            value: null,
+          },
+          // property ??
+          menus: {
+            type: Object,
+            value: null,
+          },
           autolayout: {
-            Boolean,
+            type: Boolean,
             value: false
           },
           theme: {
-            String,
+            type: String,
             value: "dark"
           },
           displaySelectionGroup: {
-            Boolean,
+            type: Boolean,
             value: true
           },
           forceSelection: {
-            Boolean,
+            type: Boolean,
             value: false
           }
         }
@@ -77,8 +96,15 @@
         this.menus = TheGraph.editor.getDefaultMenus(this);
       }
 
+      // static get observers() {
+      //   return [
+      //     /* observer array just like 1.x */
+      //     '_myPropChanged(myProp.*)'
+      //   ]
+      // }
+
       log(...args) {
-        console.log('the-graph-editor', ...args)
+        console.log('the-graph-EDITOR', ...args)
       }
 
       ready() {
@@ -86,29 +112,38 @@
         this.log('ready')
       }
 
-      attached() {}
+      connectedCallback() {
+        super.connectedCallback();
+        this.log('connected')
+      }
 
-      detached() {
+      disconnectedCallback() {
+        super.disconnectedCallback();
+        this.log('disconnected')
         for (var name in this.plugins) {
           this.plugins[name].unregister(this);
           delete this.plugins[name];
         }
       }
       addPlugin(name, plugin) {
+        this.log('addPlugin')
         this.plugins[name] = plugin;
         plugin.register(this);
       }
       addMenu(type, options) {
+        this.log('addMenu')
         // options: icon, label
         this.menus[type] = options;
       }
       addMenuCallback(type, callback) {
+        this.log('addMenuCallback')
         if (!this.menus[type]) {
           return;
         }
         this.menus[type].callback = callback;
       }
       addMenuAction(type, direction, options) {
+        this.log('addMenuAction')
         if (!this.menus[type]) {
           this.menus[type] = {};
         }
@@ -116,6 +151,7 @@
         menu[direction] = options;
       }
       getMenuDef(options) {
+        this.log('getMenuDef')
         // Options: type, graph, itemKey, item
         if (options.type && this.menus[options.type]) {
           var defaultMenu = this.menus[options.type];
@@ -126,16 +162,25 @@
         }
         return null;
       }
-      widthChanged() {
-        this.style.width = this.width + "px";
+
+      // attributeChanged (legacy)
+      _widthChanged(width, oldWidth) {
+        this.log('widthChanged', width, oldWidth)
+        this.style.width = width + "px";
       }
-      heightChanged() {
-        this.style.height = this.height + "px";
+
+      // attributeChanged (legacy)
+      _heightChanged(height, oldHeight) {
+        this.log('heightChanged', height, oldHeight)
+        this.style.height = height + "px";
       }
-      graphChanged() {
-        if (typeof this.graph.addNode === 'function') {
-          this.buildInitialLibrary(this.graph);
-          this.fbpGraph = this.graph;
+
+      // attributeChanged (old, new)
+      _graphChanged(graph, oldGraph) {
+        this.log('graphChanged', graph, oldGraph)
+        if (graph && typeof graph.addNode === 'function') {
+          this.buildInitialLibrary(graph);
+          this.fbpGraph = graph;
           return;
         }
 
@@ -153,26 +198,43 @@
           return;
         }
 
-        fbpGraph.graph.loadJSON(this.graph, function (err, graph) {
+        if (!graph) {
+          console.log('no graph to load in fbpGraph', graph)
+          return
+        }
+
+        fbpGraph.graph.loadJSON(graph, function (err, graph) {
+          console.log('graph loadJSON', graph)
           this.buildInitialLibrary(graph);
           this.fbpGraph = graph;
-          this.fire('graphInitialised', this);
+          console.log('dispatch graphInitialised')
+          var event = new CustomEvent('graphInitialised', {
+            bubbles: true
+          })
+          this.dispatchEvent(event);
         }.bind(this));
       }
+
       buildInitialLibrary(fbpGraph) {
-        /*if (Object.keys(this.$.graph.library).length !== 0) {
-          // We already have a library, skip
-          // TODO what about loading a new graph? Are we making a new editor?
-          return;
-        }*/
+        this.log('buildInitialLibrary', fbpGraph)
+        // if (Object.keys(this.$.graph.library).length !== 0) {
+        //   // We already have a library, skip
+        //   console.log('We already have a library')
+        //   // TODO what about loading a new graph? Are we making a new editor?
+        //   return;
+        // }
         var components = TheGraph.library.componentsFromGraph(fbpGraph);
+        console.log('Graph Components', components)
         components.forEach(function (component) {
           this.registerComponent(component, true);
         }.bind(this));
       }
+
       registerComponent(definition, generated) {
+        console.log('registerComponent', definition)
         this.$.graph.registerComponent(definition, generated);
       }
+
       libraryRefresh() {
         this.$.graph.debounceLibraryRefesh();
       }

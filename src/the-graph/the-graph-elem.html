@@ -16,25 +16,49 @@
 
       static get properties() {
         return {
+          // this.graph = null;
+          // this.library = null;
+          // this.menus = null;
+          // appView: null,
+          // graphView: null,
+          // autolayouter: null,
+          graph: {
+            type: Object,
+            value: null,
+            observer: '_graphChanged'
+          },
+          menus: {
+            type: Object,
+            value: null,
+          },
+          library: {
+            type: Object,
+            value: null
+          },
           width: {
             type: Number,
-            value: 800
+            value: 800,
+            observer: '_widthChanged'
           },
           height: {
             type: Number,
-            value: 600
+            value: 600,
+            observer: '_heightChanged'
           },
           scale: {
             type: Number,
-            value: 1
+            value: 1,
+            observer: '_scaleChanged'
           },
           minZoom: {
             type: Number,
-            value: 0.15
+            value: 0.15,
+            observer: '_minZoomChanged'
           },
           maxZoom: {
             type: Number,
-            value: 15
+            value: 15,
+            observer: '_maxZoomChanged'
           },
           editable: {
             type: Boolean,
@@ -42,11 +66,13 @@
           },
           autolayout: {
             type: Boolean,
-            value: false
+            value: false,
+            observer: '_autolayoutChanged'
           },
           grid: {
             type: Number,
-            value: 72
+            value: 72,
+            observer: '_gridChanged'
           },
           snap: {
             type: Number,
@@ -54,7 +80,8 @@
           },
           theme: {
             type: String,
-            value: "dark"
+            value: 'dark',
+            observer: '_themeChanged'
           },
           selectedNodes: {
             type: Array,
@@ -99,13 +126,6 @@
         super()
         this.log('create')
 
-        // this.graph = null;
-        // this.library = null;
-        // this.menus = null;
-        // appView: null,
-        // graphView: null,
-        // autolayouter: null,
-
         this.debounceLibraryRefeshTimer = null;
         this.library = {};
         // Default pan
@@ -133,30 +153,30 @@
         this.themeChanged();
       }
 
-      themeChanged() {
+      _themeChanged(theme, oldTheme) {
         this.log('themeChanged')
         // sets class of div#svgcontainer in template
-        this.$.svgcontainer.className = "the-graph-" + this.theme;
+        this.$.svgcontainer.className = "the-graph-" + theme;
       }
 
-      graphChanged(oldGraph, newGraph) {
+      _graphChanged(graph, oldGraph) {
         this.log('graphChanged')
         if (oldGraph && oldGraph.removeListener) {
           oldGraph.removeListener("endTransaction", this.fireChanged);
         }
         // Listen for graph changes
-        this.graph.on("endTransaction", this.fireChanged.bind(this));
+        graph.on("endTransaction", this.fireChanged.bind(this));
 
         // Listen for autolayout changes
         if (this.autolayout) {
-          this.graph.on('addNode', this.triggerAutolayout.bind(this));
-          this.graph.on('removeNode', this.triggerAutolayout.bind(this));
-          this.graph.on('addInport', this.triggerAutolayout.bind(this));
-          this.graph.on('removeInport', this.triggerAutolayout.bind(this));
-          this.graph.on('addOutport', this.triggerAutolayout.bind(this));
-          this.graph.on('removeOutport', this.triggerAutolayout.bind(this));
-          this.graph.on('addEdge', this.triggerAutolayout.bind(this));
-          this.graph.on('removeEdge', this.triggerAutolayout.bind(this));
+          graph.on('addNode', this.triggerAutolayout.bind(this));
+          graph.on('removeNode', this.triggerAutolayout.bind(this));
+          graph.on('addInport', this.triggerAutolayout.bind(this));
+          graph.on('removeInport', this.triggerAutolayout.bind(this));
+          graph.on('addOutport', this.triggerAutolayout.bind(this));
+          graph.on('removeOutport', this.triggerAutolayout.bind(this));
+          graph.on('addEdge', this.triggerAutolayout.bind(this));
+          graph.on('removeEdge', this.triggerAutolayout.bind(this));
         }
 
         if (this.appView) {
@@ -168,7 +188,7 @@
         this.$.svgcontainer.innerHTML = "";
         this.appView = ReactDOM.render(
           window.TheGraph.App({
-            graph: this.graph,
+            graph: graph,
             width: this.width,
             minZoom: this.minZoom,
             maxZoom: this.maxZoom,
@@ -238,7 +258,7 @@
         this.fire('nodes', this.selectedNodes);
       }
 
-      selectedNodesChanged() {
+      _selectedNodesChanged() {
         var selectedNodesHash = {};
         for (var i = 0, len = this.selectedNodes.length; i < len; i++) {
           selectedNodesHash[this.selectedNodes[i].id] = true;
@@ -247,21 +267,21 @@
         this.fire('nodes', this.selectedNodes);
       }
 
-      selectedNodesHashChanged() {
+      _selectedNodesHashChanged() {
         if (!this.graphView) {
           return;
         }
         this.graphView.setSelectedNodes(this.selectedNodesHash);
       }
 
-      errorNodesChanged() {
+      _errorNodesChanged() {
         if (!this.graphView) {
           return;
         }
         this.graphView.setErrorNodes(this.errorNodes);
       }
 
-      selectedEdgesChanged() {
+      _selectedEdgesChanged() {
         if (!this.graphView) {
           return;
         }
@@ -269,19 +289,22 @@
         this.fire('edges', this.selectedEdges);
       }
 
-      animatedEdgesChanged() {
+      _animatedEdgesChanged() {
         if (!this.graphView) {
           return;
         }
         this.graphView.setAnimatedEdges(this.animatedEdges);
       }
 
+      // Graph changed event
       fireChanged(event) {
-        this.fire("changed", this);
+        this.dispatchEvent('changed');
       }
 
-      autolayoutChanged() {
+      _autolayoutChanged(layout, oldLayout) {
+        console.log('autolayout changed', layout, oldLayout)
         if (!this.graph) {
+          console.log('no graph to autolayout')
           return;
         }
         // Only listen to changes that affect layout
@@ -349,21 +372,21 @@
         }
       }
 
-      widthChanged() {
+      _widthChanged(width, oldWidth) {
         if (!this.appView) {
           return;
         }
         this.appView.setState({
-          width: this.width
+          width: width
         });
       }
 
-      heightChanged() {
+      _heightChanged(height, oldHeight) {
         if (!this.appView) {
           return;
         }
         this.appView.setState({
-          height: this.height
+          height: height
         });
       }
 
@@ -396,14 +419,14 @@
         return [this.appView.state.x, this.appView.state.y];
       }
 
-      panChanged() {
+      _panChanged(pan, oldPan) {
         // Send pan back to React
         if (!this.appView) {
           return;
         }
         this.appView.setState({
-          x: this.pan[0],
-          y: this.pan[1]
+          x: pan[0],
+          y: pan[1]
         });
       }
 
@@ -436,14 +459,14 @@
         this.appView.focusNode(node);
       }
 
-      menusChanged() {
+      _menusChanged(menus, oldMenus) {
         // Only if the object itself changes,
         // otherwise builds menu from reference every time menu shown
         if (!this.appView) {
           return;
         }
         this.appView.setProps({
-          menus: this.menus
+          menus: menus
         });
       }
 
