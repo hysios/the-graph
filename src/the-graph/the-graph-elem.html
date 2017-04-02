@@ -50,17 +50,17 @@
           scale: {
             type: Number,
             value: 1,
-            observer: '_scaleChanged'
+            // observer: '_scaleChanged'
           },
           minZoom: {
             type: Number,
             value: 0.15,
-            observer: '_minZoomChanged'
+            // observer: '_minZoomChanged'
           },
           maxZoom: {
             type: Number,
             value: 15,
-            observer: '_maxZoomChanged'
+            // observer: '_maxZoomChanged'
           },
           editable: {
             type: Boolean,
@@ -149,10 +149,15 @@
         console.log('the-graph', ...args)
       }
 
-      ready() {
-        super.ready()
-        this.log('ready')
-        this.themeChanged();
+      // ready() {
+      //   super.ready()
+      //   this.log('ready')
+      //   // this._themeChanged();
+      // }
+      connectedCallback() {
+        super.connectedCallback();
+        this.log('connected')
+        // this._themeChanged();
       }
 
       _themeChanged(theme, oldTheme) {
@@ -216,7 +221,9 @@
         }
         console.log('app', app)
         if (!graph) {
-          throw new Error('no app to render!!')
+          // throw new Error('no graph to render in app')
+          console.error('no graph to render in app')
+          return
         }
 
         this.appView = ReactDOM.render(
@@ -314,7 +321,11 @@
 
       // Graph changed event
       fireChanged(event) {
-        this.dispatchEvent('changed');
+        var event = new CustomEvent('changed', {
+          bubbles: true
+        })
+        // this.dispatchEvent('changed');
+        this.dispatchEvent(event);
       }
 
       _autolayoutChanged(layout, oldLayout) {

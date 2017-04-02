@@ -158,7 +158,9 @@ var app = {
 }
 console.log('app', app)
 if (!graph) {
-  throw new Error('no app to render!!')
+  // throw new Error('no graph to render in app')
+  console.error('no graph to render in app')
+  return
 }
 
 this.appView = ReactDOM.render(
@@ -181,12 +183,12 @@ Trying to shield unwrap if not defined... what is it trying to do?
 I think it is using `findDOMNode` on a React `ref` (ie `refs.canvas`)
 
 ```js
-      if (typeof unwrap !== 'undefined') {
-        this.bgCanvas = unwrap(ReactDOM.findDOMNode(this.refs.canvas));
-        this.bgContext = unwrap(this.bgCanvas.getContext('2d'));
-      } else {
-        console.error('no unwrap!')
-      }
+  if (typeof unwrap !== 'undefined') {
+    this.bgCanvas = unwrap(ReactDOM.findDOMNode(this.refs.canvas));
+    this.bgContext = unwrap(this.bgCanvas.getContext('2d'));
+  } else {
+    console.error('no unwrap!')
+  }
 ```
 
 From `polymer/polymer.js`
@@ -207,6 +209,18 @@ Solution: We have simply added this identity funtion for now!
   renderCanvas: function (c) {
     // Comment this line to go plaid
     c.clearRect(0, 0, this.state.width, this.state.height);
+```
+
+#### themeChanged
+
+Most likely we should abandon usin `ready` method? This seems to go into infinite recursion?
+
+```js
+  ready() {
+    super.ready()
+    this.log('ready')
+    // this._themeChanged();
+  }
 ```
 
 ## Getting started

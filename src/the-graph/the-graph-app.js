@@ -75,6 +75,7 @@ module.exports.register = function (context) {
     displayName: "TheGraphApp",
     mixins: mixins,
     getInitialState: function () {
+      console.log('App: getInitialState')
       // Autofit
       var fit = TheGraph.findFit(this.props.graph, this.props.width, this.props.height);
 
@@ -278,6 +279,7 @@ module.exports.register = function (context) {
       });
     },
     focusNode: function (node) {
+      console.log('App: focusNode')
       var duration = TheGraph.config.focusAnimationDuration;
       var fit = TheGraph.findNodeFit(node, this.state.width, this.state.height);
       var start_point = {
@@ -322,6 +324,7 @@ module.exports.register = function (context) {
       this.hideContext();
     },
     componentDidMount: function () {
+      console.log('App: componentDidMount')
       var domNode = ReactDOM.findDOMNode(this);
 
       // Set up PolymerGestures for app and all children
@@ -495,9 +498,11 @@ module.exports.register = function (context) {
       this.props.onEdgeSelection();
     },
     renderGraph: function () {
+      console.log('App: renderGraph')
       this.refs.graph.markDirty();
     },
     componentDidUpdate: function (prevProps, prevState) {
+      console.log('App: componentDidUpdate')
       this.renderCanvas(this.bgContext);
       if (!prevState || prevState.x !== this.state.x || prevState.y !== this.state.y || prevState.scale !== this.state.scale) {
         this.onPanScale();
@@ -541,6 +546,7 @@ module.exports.register = function (context) {
     },
 
     getContext: function (menu, options, hide) {
+      console.log('App: getContext')
       return TheGraph.Menu({
         menu: menu,
         options: options,
@@ -561,6 +567,7 @@ module.exports.register = function (context) {
       });
     },
     render: function () {
+      console.log('App: render')
       // console.timeEnd("App.render");
       // console.time("App.render");
 
