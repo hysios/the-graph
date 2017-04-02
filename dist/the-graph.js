@@ -10917,6 +10917,10 @@ module.exports.register = function (context) {
 
   var TheGraph = context.TheGraph;
 
+  var unwrap = function (n) {
+    return n;
+  }
+
   TheGraph.config.app = {
     container: {
       className: "the-graph-app",
@@ -10982,10 +10986,10 @@ module.exports.register = function (context) {
     mixins.push(React.Animate);
   }
 
-  TheGraph.App = React.createFactory( React.createClass({
+  TheGraph.App = React.createFactory(React.createClass({
     displayName: "TheGraphApp",
     mixins: mixins,
-    getInitialState: function() {
+    getInitialState: function () {
       // Autofit
       var fit = TheGraph.findFit(this.props.graph, this.props.width, this.props.height);
 
@@ -11019,27 +11023,30 @@ module.exports.register = function (context) {
       }
 
       // Safari is wheelDeltaY
-      this.zoomFactor += event.deltaY ? event.deltaY : 0-event.wheelDeltaY;
+      this.zoomFactor += event.deltaY ? event.deltaY : 0 - event.wheelDeltaY;
       this.zoomX = event.clientX;
       this.zoomY = event.clientY;
       requestAnimationFrame(this.scheduleWheelZoom);
     },
     scheduleWheelZoom: function () {
-      if (isNaN(this.zoomFactor)) { return; }
+      if (isNaN(this.zoomFactor)) {
+        return;
+      }
 
       // Speed limit
-      var zoomFactor = this.zoomFactor/-500;
+      var zoomFactor = this.zoomFactor / -500;
       zoomFactor = Math.min(0.5, Math.max(-0.5, zoomFactor));
       var scale = this.state.scale + (this.state.scale * zoomFactor);
       this.zoomFactor = 0;
 
       if (scale < this.state.minZoom) {
         scale = this.state.minZoom;
-      }
-      else if (scale > this.state.maxZoom) {
+      } else if (scale > this.state.maxZoom) {
         scale = this.state.maxZoom;
       }
-      if (scale === this.state.scale) { return; }
+      if (scale === this.state.scale) {
+        return;
+      }
 
       // Zoom and pan transform-origin equivalent
       var scaleD = scale / this.state.scale;
@@ -11121,7 +11128,9 @@ module.exports.register = function (context) {
       domNode.addEventListener("trackend", this.onTrackEnd);
     },
     onTrack: function (event) {
-      if ( this.pinching ) { return; }
+      if (this.pinching) {
+        return;
+      }
       this.setState({
         x: this.state.x + event.ddx,
         y: this.state.y + event.ddy
@@ -11157,7 +11166,7 @@ module.exports.register = function (context) {
 
       // Don't go over right edge
       var x = event.detail.x + 10;
-      var width = tooltip.length*6;
+      var width = tooltip.length * 6;
       if (x + width > this.props.width) {
         x = event.detail.x - width - 10;
       }
@@ -11187,12 +11196,13 @@ module.exports.register = function (context) {
       var duration = TheGraph.config.focusAnimationDuration;
       var fit = TheGraph.findNodeFit(node, this.state.width, this.state.height);
       var start_point = {
-        x: -(this.state.x - this.state.width / 2) / this.state.scale,
-        y: -(this.state.y - this.state.height / 2) / this.state.scale,
-      }, end_point = {
-        x: node.metadata.x,
-        y: node.metadata.y,
-      };
+          x: -(this.state.x - this.state.width / 2) / this.state.scale,
+          y: -(this.state.y - this.state.height / 2) / this.state.scale,
+        },
+        end_point = {
+          x: node.metadata.x,
+          y: node.metadata.y,
+        };
       var graphfit = TheGraph.findAreaFit(start_point, end_point, this.state.width, this.state.height);
       var scale_ratio_1 = Math.abs(graphfit.scale - this.state.scale);
       var scale_ratio_2 = Math.abs(fit.scale - graphfit.scale);
@@ -11200,7 +11210,11 @@ module.exports.register = function (context) {
 
       // Animation not available, jump right there
       if (!this.animate) {
-        this.setState({ x: fit.x, y: fit.y, scale: fit.scale });
+        this.setState({
+          x: fit.x,
+          y: fit.y,
+          scale: fit.scale
+        });
         return;
       }
 
@@ -11209,7 +11223,7 @@ module.exports.register = function (context) {
         x: graphfit.x,
         y: graphfit.y,
         scale: graphfit.scale,
-      }, duration * (scale_ratio_1 / scale_ratio_diff), 'in-quint', function() {
+      }, duration * (scale_ratio_1 / scale_ratio_diff), 'in-quint', function () {
         this.animate({
           x: fit.x,
           y: fit.y,
@@ -11226,7 +11240,10 @@ module.exports.register = function (context) {
       var domNode = ReactDOM.findDOMNode(this);
 
       // Set up PolymerGestures for app and all children
-      var noop = function(){};
+      var noop = function () {};
+
+      // deprecate: PolymerGestures
+      /*
       PolymerGestures.addEventListener(domNode, "up", noop);
       PolymerGestures.addEventListener(domNode, "down", noop);
       PolymerGestures.addEventListener(domNode, "tap", noop);
@@ -11234,6 +11251,7 @@ module.exports.register = function (context) {
       PolymerGestures.addEventListener(domNode, "track", noop);
       PolymerGestures.addEventListener(domNode, "trackend", noop);
       PolymerGestures.addEventListener(domNode, "hold", noop);
+      */
 
       // Unselect edges and nodes
       if (this.props.onNodeSelection) {
@@ -11244,24 +11262,26 @@ module.exports.register = function (context) {
       var hammertime;
       if (Hammer) {
         hammertime = new Hammer(domNode, {});
-        hammertime.get('pinch').set({ enable: true });
+        hammertime.get('pinch').set({
+          enable: true
+        });
       }
 
       // Pointer gesture event for pan
       domNode.addEventListener("trackstart", this.onTrackStart);
 
       var isTouchDevice = 'ontouchstart' in document.documentElement;
-      if( isTouchDevice && hammertime ){
+      if (isTouchDevice && hammertime) {
         hammertime.on("pinchstart", this.onTransformStart);
         hammertime.on("pinch", this.onTransform);
         hammertime.on("pinchend", this.onTransformEnd);
       }
 
       // Wheel to zoom
-      if (domNode.onwheel!==undefined) {
+      if (domNode.onwheel !== undefined) {
         // Chrome and Firefox
         domNode.addEventListener("wheel", this.onWheel);
-      } else if (domNode.onmousewheel!==undefined) {
+      } else if (domNode.onmousewheel !== undefined) {
         // Safari
         domNode.addEventListener("mousewheel", this.onWheel);
       }
@@ -11273,11 +11293,11 @@ module.exports.register = function (context) {
       // Edge preview
       domNode.addEventListener("the-graph-edge-start", this.edgeStart);
 
-      domNode.addEventListener("contextmenu",this.onShowContext);
+      domNode.addEventListener("contextmenu", this.onShowContext);
 
       // Start zoom from middle if zoom before mouse move
-      this.mouseX = Math.floor( this.props.width/2 );
-      this.mouseY = Math.floor( this.props.height/2 );
+      this.mouseX = Math.floor(this.props.width / 2);
+      this.mouseY = Math.floor(this.props.height / 2);
 
       // HACK metaKey global for taps https://github.com/Polymer/PointerGestures/issues/29
       document.addEventListener('keydown', this.keyDown);
@@ -11297,7 +11317,9 @@ module.exports.register = function (context) {
     onShowContext: function (event) {
       event.preventDefault();
       event.stopPropagation();
-      if (event.preventTap) { event.preventTap(); }
+      if (event.preventTap) {
+        event.preventTap();
+      }
 
       // Get mouse position
       var x = event.x || event.clientX || 0;
@@ -11321,49 +11343,49 @@ module.exports.register = function (context) {
       }
 
       var key = event.keyCode,
-          hotKeys = {
-            // Delete
-            46: function () {
-              var graph = this.refs.graph.state.graph,
-                  selectedNodes = this.refs.graph.state.selectedNodes,
-                  selectedEdges = this.refs.graph.state.selectedEdges,
-                  menus = this.props.menus,
-                  menuOption = null,
-                  menuAction = null,
-                  nodeKey = null,
-                  node = null,
-                  edge = null;
+        hotKeys = {
+          // Delete
+          46: function () {
+            var graph = this.refs.graph.state.graph,
+              selectedNodes = this.refs.graph.state.selectedNodes,
+              selectedEdges = this.refs.graph.state.selectedEdges,
+              menus = this.props.menus,
+              menuOption = null,
+              menuAction = null,
+              nodeKey = null,
+              node = null,
+              edge = null;
 
-              for (nodeKey in selectedNodes) {
-                if (selectedNodes.hasOwnProperty(nodeKey)) {
-                  node = graph.getNode(nodeKey);
-                  menus.node.actions.delete(graph, nodeKey, node);
-                }
+            for (nodeKey in selectedNodes) {
+              if (selectedNodes.hasOwnProperty(nodeKey)) {
+                node = graph.getNode(nodeKey);
+                menus.node.actions.delete(graph, nodeKey, node);
               }
-              selectedEdges.map(function (edge) {
-                menus.edge.actions.delete(graph, null, edge);
-              });
-            }.bind(this),
-            // f for fit
-            70: function () {
-              this.triggerFit();
-            }.bind(this),
-            // s for selected
-            83: function () {
-              var graph = this.refs.graph.state.graph,
-                  selectedNodes = this.refs.graph.state.selectedNodes,
-                  nodeKey = null,
-                  node = null;
+            }
+            selectedEdges.map(function (edge) {
+              menus.edge.actions.delete(graph, null, edge);
+            });
+          }.bind(this),
+          // f for fit
+          70: function () {
+            this.triggerFit();
+          }.bind(this),
+          // s for selected
+          83: function () {
+            var graph = this.refs.graph.state.graph,
+              selectedNodes = this.refs.graph.state.selectedNodes,
+              nodeKey = null,
+              node = null;
 
-              for (nodeKey in selectedNodes) {
-                if (selectedNodes.hasOwnProperty(nodeKey)) {
-                  node = graph.getNode(nodeKey);
-                  this.focusNode(node);
-                  break;
-                }
+            for (nodeKey in selectedNodes) {
+              if (selectedNodes.hasOwnProperty(nodeKey)) {
+                node = graph.getNode(nodeKey);
+                this.focusNode(node);
+                break;
               }
-            }.bind(this)
-          };
+            }
+          }.bind(this)
+        };
 
       if (hotKeys[key]) {
         hotKeys[key]();
@@ -11371,7 +11393,7 @@ module.exports.register = function (context) {
     },
     keyUp: function (event) {
       // Escape
-      if (event.keyCode===27) {
+      if (event.keyCode === 27) {
         if (!this.refs.graph) {
           return;
         }
@@ -11392,11 +11414,13 @@ module.exports.register = function (context) {
     },
     componentDidUpdate: function (prevProps, prevState) {
       this.renderCanvas(this.bgContext);
-      if (!prevState || prevState.x!==this.state.x || prevState.y!==this.state.y || prevState.scale!==this.state.scale) {
+      if (!prevState || prevState.x !== this.state.x || prevState.y !== this.state.y || prevState.scale !== this.state.scale) {
         this.onPanScale();
       }
     },
     renderCanvas: function (c) {
+      console.log('renderCanvas', c)
+
       // Comment this line to go plaid
       c.clearRect(0, 0, this.state.width, this.state.height);
 
@@ -11409,15 +11433,15 @@ module.exports.register = function (context) {
       var cols = Math.floor(this.state.width / g) + 1;
       var row = Math.floor(this.state.height / g) + 1;
       // Origin row/col index
-      var oc = Math.floor(this.state.x / g) + (this.state.x<0 ? 1 : 0);
-      var or = Math.floor(this.state.y / g) + (this.state.y<0 ? 1 : 0);
+      var oc = Math.floor(this.state.x / g) + (this.state.x < 0 ? 1 : 0);
+      var or = Math.floor(this.state.y / g) + (this.state.y < 0 ? 1 : 0);
 
       while (row--) {
         var col = cols;
         while (col--) {
-          var x = Math.round(col*g+dx);
-          var y = Math.round(row*g+dy);
-          if ((oc-col)%3===0 && (or-row)%3===0) {
+          var x = Math.round(col * g + dx);
+          var y = Math.round(row * g + dy);
+          if ((oc - col) % 3 === 0 && (or - row) % 3 === 0) {
             // 3x grid
             c.fillStyle = "white";
             c.fillRect(x, y, 1, 1);
@@ -11432,26 +11456,26 @@ module.exports.register = function (context) {
     },
 
     getContext: function (menu, options, hide) {
-        return TheGraph.Menu({
-            menu: menu,
-            options: options,
-            triggerHideContext: hide,
-            label: "Hello",
-            graph: this.props.graph,
-            node: this,
-            ports: [],
-            process: [],
-            processKey: null,
-            x: options.x,
-            y: options.y,
-            nodeWidth: this.props.width,
-            nodeHeight: this.props.height,
-            deltaX: 0,
-            deltaY: 0,
-            highlightPort: false
-        });
+      return TheGraph.Menu({
+        menu: menu,
+        options: options,
+        triggerHideContext: hide,
+        label: "Hello",
+        graph: this.props.graph,
+        node: this,
+        ports: [],
+        process: [],
+        processKey: null,
+        x: options.x,
+        y: options.y,
+        nodeWidth: this.props.width,
+        nodeHeight: this.props.height,
+        deltaX: 0,
+        deltaY: 0,
+        highlightPort: false
+      });
     },
-    render: function() {
+    render: function () {
       // console.timeEnd("App.render");
       // console.time("App.render");
 
@@ -11459,12 +11483,12 @@ module.exports.register = function (context) {
       var sc = this.state.scale;
       var x = this.state.x;
       var y = this.state.y;
-      var transform = "matrix("+sc+",0,0,"+sc+","+x+","+y+")";
+      var transform = "matrix(" + sc + ",0,0," + sc + "," + x + "," + y + ")";
 
-      var scaleClass = sc > TheGraph.zbpBig ? "big" : ( sc > TheGraph.zbpNormal ? "normal" : "small");
+      var scaleClass = sc > TheGraph.zbpBig ? "big" : (sc > TheGraph.zbpNormal ? "normal" : "small");
 
       var contextMenu, contextModal;
-      if ( this.state.contextMenu ) {
+      if (this.state.contextMenu) {
         var options = this.state.contextMenu;
         var menu = this.props.getMenuDef(options);
         if (menu) {
@@ -11473,7 +11497,7 @@ module.exports.register = function (context) {
       }
       if (contextMenu) {
 
-        var modalBGOptions ={
+        var modalBGOptions = {
           width: this.state.width,
           height: this.state.height,
           triggerHideContext: this.hideContext,
@@ -11500,7 +11524,9 @@ module.exports.register = function (context) {
       graphElementOptions = TheGraph.merge(TheGraph.config.app.graph, graphElementOptions);
       var graphElement = TheGraph.factories.app.createAppGraph.call(this, graphElementOptions);
 
-      var svgGroupOptions = TheGraph.merge(TheGraph.config.app.svgGroup, { transform: transform });
+      var svgGroupOptions = TheGraph.merge(TheGraph.config.app.svgGroup, {
+        transform: transform
+      });
       var svgGroup = TheGraph.factories.app.createAppSvgGroup.call(this, svgGroupOptions, [graphElement]);
 
       var tooltipOptions = {
@@ -11513,7 +11539,9 @@ module.exports.register = function (context) {
       tooltipOptions = TheGraph.merge(TheGraph.config.app.tooltip, tooltipOptions);
       var tooltip = TheGraph.factories.app.createAppTooltip.call(this, tooltipOptions);
 
-      var modalGroupOptions = TheGraph.merge(TheGraph.config.app.modal, { children: contextModal });
+      var modalGroupOptions = TheGraph.merge(TheGraph.config.app.modal, {
+        children: contextModal
+      });
       var modalGroup = TheGraph.factories.app.createAppModalGroup.call(this, modalGroupOptions);
 
       var svgContents = [
@@ -11522,17 +11550,28 @@ module.exports.register = function (context) {
         modalGroup
       ];
 
-      var svgOptions = TheGraph.merge(TheGraph.config.app.svg, { width: this.state.width, height: this.state.height });
+      var svgOptions = TheGraph.merge(TheGraph.config.app.svg, {
+        width: this.state.width,
+        height: this.state.height
+      });
       var svg = TheGraph.factories.app.createAppSvg.call(this, svgOptions, svgContents);
 
-      var canvasOptions = TheGraph.merge(TheGraph.config.app.canvas, { width: this.state.width, height: this.state.height });
+      var canvasOptions = TheGraph.merge(TheGraph.config.app.canvas, {
+        width: this.state.width,
+        height: this.state.height
+      });
       var canvas = TheGraph.factories.app.createAppCanvas.call(this, canvasOptions);
 
       var appContents = [
         canvas,
         svg
       ];
-      var containerOptions = TheGraph.merge(TheGraph.config.app.container, { style: { width: this.state.width, height: this.state.height } });
+      var containerOptions = TheGraph.merge(TheGraph.config.app.container, {
+        style: {
+          width: this.state.width,
+          height: this.state.height
+        }
+      });
       containerOptions.className += " " + scaleClass;
       return TheGraph.factories.app.createAppContainer.call(this, containerOptions, appContents);
     }
@@ -11540,7 +11579,6 @@ module.exports.register = function (context) {
 
 
 };
-
 },{}],22:[function(require,module,exports){
 
 // NOTE: caller should wrap in a graph transaction, to group all changes made to @graph
@@ -13904,21 +13942,24 @@ module.exports.register = function (context) {
 
   // PolymerGestures monkeypatch
   function patchGestures() {
-    PolymerGestures.dispatcher.gestures.forEach( function (gesture) {
-      // hold
-      if (gesture.HOLD_DELAY) {
-        gesture.HOLD_DELAY = 500;
-      }
-      // track
-      if (gesture.WIGGLE_THRESHOLD) {
-        gesture.WIGGLE_THRESHOLD = 8;
-      }
-    });
+    // Polymer.Gestures.
+
+    // DEPRECATED!!!
+    // PolymerGestures.dispatcher.gestures.forEach( function (gesture) {
+    //   // hold
+    //   if (gesture.HOLD_DELAY) {
+    //     gesture.HOLD_DELAY = 500;
+    //   }
+    //   // track
+    //   if (gesture.WIGGLE_THRESHOLD) {
+    //     gesture.WIGGLE_THRESHOLD = 8;
+    //   }
+    // });
   }
 
 
   // Node view
-  TheGraph.Node = React.createFactory( React.createClass({
+  TheGraph.Node = React.createFactory(React.createClass({
     displayName: "TheGraphNode",
     mixins: [
       TheGraph.mixins.Tooltip
@@ -13926,7 +13967,7 @@ module.exports.register = function (context) {
     componentDidMount: function () {
       patchGestures();
       var domNode = ReactDOM.findDOMNode(this);
-      
+
       // Dragging
       domNode.addEventListener("trackstart", this.onTrackStart);
 
@@ -13946,7 +13987,7 @@ module.exports.register = function (context) {
       // Don't tap app (unselect)
       event.stopPropagation();
 
-      var toggle = (TheGraph.metaKeyPressed || event.pointerType==="touch");
+      var toggle = (TheGraph.metaKeyPressed || event.pointerType === "touch");
       this.props.onNodeSelection(this.props.nodeID, this.props.node, toggle);
     },
     onTrackStart: function (event) {
@@ -13957,10 +13998,14 @@ module.exports.register = function (context) {
       event.preventTap();
 
       // Don't drag under menu
-      if (this.props.app.menuShown) { return; }
+      if (this.props.app.menuShown) {
+        return;
+      }
 
       // Don't drag while pinching
-      if (this.props.app.pinching) { return; }
+      if (this.props.app.pinching) {
+        return;
+      }
 
       var domNode = ReactDOM.findDOMNode(this);
       domNode.addEventListener("track", this.onTrack);
@@ -13978,8 +14023,8 @@ module.exports.register = function (context) {
       event.stopPropagation();
 
       var scale = this.props.app.state.scale;
-      var deltaX = Math.round( event.ddx / scale );
-      var deltaY = Math.round( event.ddy / scale );
+      var deltaX = Math.round(event.ddx / scale);
+      var deltaY = Math.round(event.ddy / scale);
 
       // Fires a change event on fbp-graph graph, which triggers redraw
       if (this.props.export) {
@@ -14014,8 +14059,8 @@ module.exports.register = function (context) {
         var x, y;
         if (this.props.export) {
           var newPos = {
-            x: Math.round(this.props.export.metadata.x/snap) * snap,
-            y: Math.round(this.props.export.metadata.y/snap) * snap
+            x: Math.round(this.props.export.metadata.x / snap) * snap,
+            y: Math.round(this.props.export.metadata.y / snap) * snap
           };
           if (this.props.isIn) {
             this.props.graph.setInportMetadata(this.props.exportKey, newPos);
@@ -14024,8 +14069,8 @@ module.exports.register = function (context) {
           }
         } else {
           this.props.graph.setNodeMetadata(this.props.nodeID, {
-            x: Math.round(this.props.node.metadata.x/snap) * snap,
-            y: Math.round(this.props.node.metadata.y/snap) * snap
+            x: Math.round(this.props.node.metadata.x / snap) * snap,
+            y: Math.round(this.props.node.metadata.y / snap) * snap
           });
         }
       }
@@ -14043,7 +14088,9 @@ module.exports.register = function (context) {
 
       // Don't tap graph on hold event
       event.stopPropagation();
-      if (event.preventTap) { event.preventTap(); }
+      if (event.preventTap) {
+        event.preventTap();
+      }
 
       // Get mouse position
       var x = event.x || event.clientX || 0;
@@ -14153,7 +14200,7 @@ module.exports.register = function (context) {
     shouldComponentUpdate: function (nextProps, nextState) {
       // Only rerender if changed
       return (
-        nextProps.x !== this.props.x || 
+        nextProps.x !== this.props.x ||
         nextProps.y !== this.props.y ||
         nextProps.icon !== this.props.icon ||
         nextProps.label !== this.props.label ||
@@ -14165,7 +14212,7 @@ module.exports.register = function (context) {
         nextProps.ports.dirty === true
       );
     },
-    render: function() {
+    render: function () {
       if (this.props.ports.dirty) {
         // This tag is set when an edge or iip changes port colors
         this.props.ports.dirty = false;
@@ -14196,7 +14243,7 @@ module.exports.register = function (context) {
       keys = Object.keys(inports);
       count = keys.length;
       // Make views
-      var inportViews = keys.map(function(key){
+      var inportViews = keys.map(function (key) {
         var info = inports[key];
         var props = {
           app: app,
@@ -14213,7 +14260,11 @@ module.exports.register = function (context) {
           nodeHeight: height,
           x: info.x,
           y: info.y,
-          port: {process:processKey, port:info.label, type:info.type},
+          port: {
+            process: processKey,
+            port: info.label,
+            type: info.type
+          },
           highlightPort: highlightPort,
           route: info.route,
           showContext: showContext
@@ -14225,7 +14276,7 @@ module.exports.register = function (context) {
       var outports = this.props.ports.outports;
       keys = Object.keys(outports);
       count = keys.length;
-      var outportViews = keys.map(function(key){
+      var outportViews = keys.map(function (key) {
         var info = outports[key];
         var props = {
           app: app,
@@ -14242,7 +14293,11 @@ module.exports.register = function (context) {
           nodeHeight: height,
           x: info.x,
           y: info.y,
-          port: {process:processKey, port:info.label, type:info.type},
+          port: {
+            process: processKey,
+            port: info.label,
+            type: info.type
+          },
           highlightPort: highlightPort,
           route: info.route,
           showContext: showContext
@@ -14251,45 +14306,63 @@ module.exports.register = function (context) {
       });
 
       // Node Icon
-      var icon = TheGraph.FONT_AWESOME[ this.props.icon ];
+      var icon = TheGraph.FONT_AWESOME[this.props.icon];
       if (!icon) {
         icon = TheGraph.FONT_AWESOME.cog;
       }
 
       var iconContent;
       if (this.props.iconsvg && this.props.iconsvg !== "") {
-          var iconSVGOptions = TheGraph.merge(TheGraph.config.node.iconsvg, {
-              src: this.props.iconsvg,
-              x: TheGraph.config.nodeRadius - 4,
-              y: TheGraph.config.nodeRadius - 4,
-              width: this.props.width - 10,
-              height: this.props.height - 10
-          });
-          iconContent = TheGraph.factories.node.createNodeIconSVG.call(this, iconSVGOptions);
+        var iconSVGOptions = TheGraph.merge(TheGraph.config.node.iconsvg, {
+          src: this.props.iconsvg,
+          x: TheGraph.config.nodeRadius - 4,
+          y: TheGraph.config.nodeRadius - 4,
+          width: this.props.width - 10,
+          height: this.props.height - 10
+        });
+        iconContent = TheGraph.factories.node.createNodeIconSVG.call(this, iconSVGOptions);
       } else {
-          var iconOptions = TheGraph.merge(TheGraph.config.node.icon, {
-              x: this.props.width / 2,
-              y: this.props.height / 2,
-              children: icon });
-          iconContent = TheGraph.factories.node.createNodeIconText.call(this, iconOptions);
+        var iconOptions = TheGraph.merge(TheGraph.config.node.icon, {
+          x: this.props.width / 2,
+          y: this.props.height / 2,
+          children: icon
+        });
+        iconContent = TheGraph.factories.node.createNodeIconText.call(this, iconOptions);
       }
 
-      var backgroundRectOptions = TheGraph.merge(TheGraph.config.node.background, { width: this.props.width, height: this.props.height + 25 });
+      var backgroundRectOptions = TheGraph.merge(TheGraph.config.node.background, {
+        width: this.props.width,
+        height: this.props.height + 25
+      });
       var backgroundRect = TheGraph.factories.node.createNodeBackgroundRect.call(this, backgroundRectOptions);
 
-      var borderRectOptions = TheGraph.merge(TheGraph.config.node.border, { width: this.props.width, height: this.props.height });
+      var borderRectOptions = TheGraph.merge(TheGraph.config.node.border, {
+        width: this.props.width,
+        height: this.props.height
+      });
       var borderRect = TheGraph.factories.node.createNodeBorderRect.call(this, borderRectOptions);
-      
-      var innerRectOptions = TheGraph.merge(TheGraph.config.node.innerRect, { width: this.props.width - 6, height: this.props.height - 6 });
+
+      var innerRectOptions = TheGraph.merge(TheGraph.config.node.innerRect, {
+        width: this.props.width - 6,
+        height: this.props.height - 6
+      });
       var innerRect = TheGraph.factories.node.createNodeInnerRect.call(this, innerRectOptions);
 
-      var inportsOptions = TheGraph.merge(TheGraph.config.node.inports, { children: inportViews });
+      var inportsOptions = TheGraph.merge(TheGraph.config.node.inports, {
+        children: inportViews
+      });
       var inportsGroup = TheGraph.factories.node.createNodeInportsGroup.call(this, inportsOptions);
 
-      var outportsOptions = TheGraph.merge(TheGraph.config.node.outports, { children: outportViews });
+      var outportsOptions = TheGraph.merge(TheGraph.config.node.outports, {
+        children: outportViews
+      });
       var outportsGroup = TheGraph.factories.node.createNodeOutportsGroup.call(this, outportsOptions);
 
-      var labelTextOptions = TheGraph.merge(TheGraph.config.node.labelText, { x: this.props.width / 2, y: this.props.height + 15, children: label });
+      var labelTextOptions = TheGraph.merge(TheGraph.config.node.labelText, {
+        x: this.props.width / 2,
+        y: this.props.height + 15,
+        children: label
+      });
       var labelText = TheGraph.factories.node.createNodeLabelText.call(this, labelTextOptions);
 
       var labelRectX = this.props.width / 2;
@@ -14299,7 +14372,11 @@ module.exports.register = function (context) {
       var labelRect = TheGraph.factories.node.createNodeLabelRect.call(this, labelRectOptions);
       var labelGroup = TheGraph.factories.node.createNodeLabelGroup.call(this, TheGraph.config.node.labelBackground, [labelRect, labelText]);
 
-      var sublabelTextOptions = TheGraph.merge(TheGraph.config.node.sublabelText, { x: this.props.width / 2, y: this.props.height + 30, children: sublabel });
+      var sublabelTextOptions = TheGraph.merge(TheGraph.config.node.sublabelText, {
+        x: this.props.width / 2,
+        y: this.props.height + 30,
+        children: sublabel
+      });
       var sublabelText = TheGraph.factories.node.createNodeSublabelText.call(this, sublabelTextOptions);
 
       var sublabelRectX = this.props.width / 2;
@@ -14321,13 +14398,13 @@ module.exports.register = function (context) {
       ];
 
       var nodeOptions = {
-        className: "node drag"+
-          (this.props.selected ? " selected" : "")+
+        className: "node drag" +
+          (this.props.selected ? " selected" : "") +
           (this.props.error ? " error" : ""),
         name: this.props.nodeID,
         key: this.props.nodeID,
         title: label,
-        transform: "translate("+x+","+y+")"
+        transform: "translate(" + x + "," + y + ")"
       };
       nodeOptions = TheGraph.merge(TheGraph.config.node.container, nodeOptions);
 
@@ -14337,7 +14414,7 @@ module.exports.register = function (context) {
 
   function buildLabelRectOptions(height, x, y, len, className) {
 
-    var width = len * height * 2/3;
+    var width = len * height * 2 / 3;
     var radius = height / 2;
     x -= width / 2;
     y -= height / 2;
@@ -14356,7 +14433,6 @@ module.exports.register = function (context) {
   }
 
 };
-
 },{}],34:[function(require,module,exports){
 module.exports.register = function (context) {
 
@@ -14643,25 +14719,30 @@ module.exports.register = function (context) {
   TheGraph.mixins = {};
 
   // Show fake tooltip
-  // Class must have getTooltipTrigger (dom node) and shouldShowTooltip (boolean)
+  // Class must have getTooltipTrigger (dom node) and
+  // shouldShowTooltip (boolean)
   TheGraph.mixins.Tooltip = {
     showTooltip: function (event) {
-      if ( !this.shouldShowTooltip() ) { return; }
+      if (!this.shouldShowTooltip()) {
+        return;
+      }
 
-      var tooltipEvent = new CustomEvent('the-graph-tooltip', { 
+      var tooltipEvent = new CustomEvent('the-graph-tooltip', {
         detail: {
           tooltip: this.props.label,
           x: event.clientX,
           y: event.clientY
-        }, 
+        },
         bubbles: true
       });
       ReactDOM.findDOMNode(this).dispatchEvent(tooltipEvent);
     },
     hideTooltip: function (event) {
-      if ( !this.shouldShowTooltip() ) { return; }
+      if (!this.shouldShowTooltip()) {
+        return;
+      }
 
-      var tooltipEvent = new CustomEvent('the-graph-tooltip-hide', { 
+      var tooltipEvent = new CustomEvent('the-graph-tooltip-hide', {
         bubbles: true
       });
       if (this.isMounted()) {
@@ -14681,9 +14762,10 @@ module.exports.register = function (context) {
   };
 
   TheGraph.findMinMax = function (graph, nodes) {
+    console.log('findMinMax', graph)
     var inports, outports;
     if (nodes === undefined) {
-      nodes = graph.nodes.map( function (node) {
+      nodes = graph.nodes.map(function (node) {
         return node.id;
       });
       // Only look at exports when calculating the whole graph
@@ -14700,43 +14782,71 @@ module.exports.register = function (context) {
 
     // Loop through nodes
     var len = nodes.length;
-    for (var i=0; i<len; i++) {
+    for (var i = 0; i < len; i++) {
       var key = nodes[i];
       var node = graph.getNode(key);
       if (!node || !node.metadata) {
         continue;
       }
-      if (node.metadata.x < minX) { minX = node.metadata.x; }
-      if (node.metadata.y < minY) { minY = node.metadata.y; }
+      if (node.metadata.x < minX) {
+        minX = node.metadata.x;
+      }
+      if (node.metadata.y < minY) {
+        minY = node.metadata.y;
+      }
       var x = node.metadata.x + node.metadata.width;
       var y = node.metadata.y + node.metadata.height;
-      if (x > maxX) { maxX = x; }
-      if (y > maxY) { maxY = y; }
+      if (x > maxX) {
+        maxX = x;
+      }
+      if (y > maxY) {
+        maxY = y;
+      }
     }
     // Loop through exports
     var keys, exp;
     if (inports) {
       keys = Object.keys(inports);
       len = keys.length;
-      for (i=0; i<len; i++) {
+      for (i = 0; i < len; i++) {
         exp = inports[keys[i]];
-        if (!exp.metadata) { continue; }
-        if (exp.metadata.x < minX) { minX = exp.metadata.x; }
-        if (exp.metadata.y < minY) { minY = exp.metadata.y; }
-        if (exp.metadata.x > maxX) { maxX = exp.metadata.x; }
-        if (exp.metadata.y > maxY) { maxY = exp.metadata.y; }
+        if (!exp.metadata) {
+          continue;
+        }
+        if (exp.metadata.x < minX) {
+          minX = exp.metadata.x;
+        }
+        if (exp.metadata.y < minY) {
+          minY = exp.metadata.y;
+        }
+        if (exp.metadata.x > maxX) {
+          maxX = exp.metadata.x;
+        }
+        if (exp.metadata.y > maxY) {
+          maxY = exp.metadata.y;
+        }
       }
     }
     if (outports) {
       keys = Object.keys(outports);
       len = keys.length;
-      for (i=0; i<len; i++) {
+      for (i = 0; i < len; i++) {
         exp = outports[keys[i]];
-        if (!exp.metadata) { continue; }
-        if (exp.metadata.x < minX) { minX = exp.metadata.x; }
-        if (exp.metadata.y < minY) { minY = exp.metadata.y; }
-        if (exp.metadata.x > maxX) { maxX = exp.metadata.x; }
-        if (exp.metadata.y > maxY) { maxY = exp.metadata.y; }
+        if (!exp.metadata) {
+          continue;
+        }
+        if (exp.metadata.x < minX) {
+          minX = exp.metadata.x;
+        }
+        if (exp.metadata.y < minY) {
+          minY = exp.metadata.y;
+        }
+        if (exp.metadata.x > maxX) {
+          maxX = exp.metadata.x;
+        }
+        if (exp.metadata.y > maxY) {
+          maxY = exp.metadata.y;
+        }
       }
     }
 
@@ -14754,7 +14864,11 @@ module.exports.register = function (context) {
   TheGraph.findFit = function (graph, width, height) {
     var limits = TheGraph.findMinMax(graph);
     if (!limits) {
-      return {x:0, y:0, scale:1};
+      return {
+        x: 0,
+        y: 0,
+        scale: 1
+      };
     }
     limits.minX -= TheGraph.config.nodeSize;
     limits.minY -= TheGraph.config.nodeSize;
@@ -14771,10 +14885,10 @@ module.exports.register = function (context) {
     if (scaleX < scaleY) {
       scale = scaleX;
       x = 0 - limits.minX * scale;
-      y = 0 - limits.minY * scale + (height-(gHeight*scale))/2;
+      y = 0 - limits.minY * scale + (height - (gHeight * scale)) / 2;
     } else {
       scale = scaleY;
-      x = 0 - limits.minX * scale + (width-(gWidth*scale))/2;
+      x = 0 - limits.minX * scale + (width - (gWidth * scale)) / 2;
       y = 0 - limits.minY * scale;
     }
 
@@ -14808,10 +14922,10 @@ module.exports.register = function (context) {
     if (scaleX < scaleY) {
       scale = scaleX;
       x = 0 - limits.minX * scale;
-      y = 0 - limits.minY * scale + (height-(gHeight*scale))/2;
+      y = 0 - limits.minY * scale + (height - (gHeight * scale)) / 2;
     } else {
       scale = scaleY;
-      x = 0 - limits.minX * scale + (width-(gWidth*scale))/2;
+      x = 0 - limits.minX * scale + (width - (gWidth * scale)) / 2;
       y = 0 - limits.minY * scale;
     }
 
@@ -14840,10 +14954,10 @@ module.exports.register = function (context) {
     if (scaleX < scaleY) {
       scale = scaleX;
       x = 0 - limits.minX * scale;
-      y = 0 - limits.minY * scale + (height-(gHeight*scale))/2;
+      y = 0 - limits.minY * scale + (height - (gHeight * scale)) / 2;
     } else {
       scale = scaleY;
-      x = 0 - limits.minX * scale + (width-(gWidth*scale))/2;
+      x = 0 - limits.minX * scale + (width - (gWidth * scale)) / 2;
       y = 0 - limits.minY * scale;
     }
 
@@ -14856,66 +14970,68 @@ module.exports.register = function (context) {
 
   // SVG arc math
   var angleToX = function (percent, radius) {
-    return radius * Math.cos(2*Math.PI * percent);
+    return radius * Math.cos(2 * Math.PI * percent);
   };
   var angleToY = function (percent, radius) {
-    return radius * Math.sin(2*Math.PI * percent);
+    return radius * Math.sin(2 * Math.PI * percent);
   };
   var makeArcPath = function (startPercent, endPercent, radius) {
-    return [ 
+    return [
       "M", angleToX(startPercent, radius), angleToY(startPercent, radius),
       "A", radius, radius, 0, 0, 0, angleToX(endPercent, radius), angleToY(endPercent, radius)
     ].join(" ");
   };
   TheGraph.arcs = {
-    n4: makeArcPath(7/8, 5/8, 36),
-    s4: makeArcPath(3/8, 1/8, 36),
-    e4: makeArcPath(1/8, -1/8, 36),
-    w4: makeArcPath(5/8, 3/8, 36),
-    inport: makeArcPath(-1/4, 1/4, 4),
-    outport: makeArcPath(1/4, -1/4, 4),
-    inportBig: makeArcPath(-1/4, 1/4, 6),
-    outportBig: makeArcPath(1/4, -1/4, 6),
+    n4: makeArcPath(7 / 8, 5 / 8, 36),
+    s4: makeArcPath(3 / 8, 1 / 8, 36),
+    e4: makeArcPath(1 / 8, -1 / 8, 36),
+    w4: makeArcPath(5 / 8, 3 / 8, 36),
+    inport: makeArcPath(-1 / 4, 1 / 4, 4),
+    outport: makeArcPath(1 / 4, -1 / 4, 4),
+    inportBig: makeArcPath(-1 / 4, 1 / 4, 6),
+    outportBig: makeArcPath(1 / 4, -1 / 4, 6),
   };
 
 
   // Reusable React classes
-  TheGraph.SVGImage = React.createFactory( React.createClass({
+  TheGraph.SVGImage = React.createFactory(React.createClass({
     displayName: "TheGraphSVGImage",
-    render: function() {
-        var html = '<image ';
-        html = html +'xlink:href="'+ this.props.src + '"';
-        html = html +'x="' + this.props.x + '"';
-        html = html +'y="' + this.props.y + '"';
-        html = html +'width="' + this.props.width + '"';
-        html = html +'height="' + this.props.height + '"';
-        html = html +'/>';
+    render: function () {
+      var html = '<image ';
+      html = html + 'xlink:href="' + this.props.src + '"';
+      html = html + 'x="' + this.props.x + '"';
+      html = html + 'y="' + this.props.y + '"';
+      html = html + 'width="' + this.props.width + '"';
+      html = html + 'height="' + this.props.height + '"';
+      html = html + '/>';
 
-        return React.DOM.g({
-            className: this.props.className,
-            dangerouslySetInnerHTML:{__html: html}
-        });
+      return React.DOM.g({
+        className: this.props.className,
+        dangerouslySetInnerHTML: {
+          __html: html
+        }
+      });
     }
   }));
 
-  TheGraph.TextBG = React.createFactory( React.createClass({
+  TheGraph.TextBG = React.createFactory(React.createClass({
     displayName: "TheGraphTextBG",
-    render: function() {
+    render: function () {
       var text = this.props.text;
       if (!text) {
         text = "";
       }
       var height = this.props.height;
-      var width = text.length * this.props.height * 2/3;
-      var radius = this.props.height/2;
+      var width = text.length * this.props.height * 2 / 3;
+      var radius = this.props.height / 2;
 
       var textAnchor = "start";
       var dominantBaseline = "central";
       var x = this.props.x;
-      var y = this.props.y - height/2;
+      var y = this.props.y - height / 2;
 
       if (this.props.halign === "center") {
-        x -= width/2;
+        x -= width / 2;
         textAnchor = "middle";
       }
       if (this.props.halign === "right") {
@@ -14923,8 +15039,7 @@ module.exports.register = function (context) {
         textAnchor = "end";
       }
 
-      return React.DOM.g(
-        {
+      return React.DOM.g({
           className: (this.props.className ? this.props.className : "text-bg"),
         },
         React.DOM.rect({
@@ -14947,7 +15062,7 @@ module.exports.register = function (context) {
   }));
 
   // The `merge` function provides simple property merging.
-  TheGraph.merge = function(src, dest, overwrite) {
+  TheGraph.merge = function (src, dest, overwrite) {
     // Do nothing if neither are true objects.
     if (Array.isArray(src) || Array.isArray(dest) || typeof src !== 'object' || typeof dest !== 'object')
       return dest;
@@ -14964,7 +15079,7 @@ module.exports.register = function (context) {
     return dest;
   };
 
-  TheGraph.factories.createGroup = function(options, content) {
+  TheGraph.factories.createGroup = function (options, content) {
     var args = [options];
 
     if (Array.isArray(content)) {
@@ -14974,35 +15089,35 @@ module.exports.register = function (context) {
     return React.DOM.g.apply(React.DOM.g, args);
   };
 
-  TheGraph.factories.createRect = function(options) {
+  TheGraph.factories.createRect = function (options) {
     return React.DOM.rect(options);
   };
 
-  TheGraph.factories.createText = function(options) {
+  TheGraph.factories.createText = function (options) {
     return React.DOM.text(options);
   };
 
-  TheGraph.factories.createCircle = function(options) {
+  TheGraph.factories.createCircle = function (options) {
     return React.DOM.circle(options);
   };
 
-  TheGraph.factories.createPath = function(options) {
+  TheGraph.factories.createPath = function (options) {
     return React.DOM.path(options);
   };
 
-  TheGraph.factories.createPolygon = function(options) {
+  TheGraph.factories.createPolygon = function (options) {
     return React.DOM.polygon(options);
   };
 
-  TheGraph.factories.createImg = function(options) {
+  TheGraph.factories.createImg = function (options) {
     return TheGraph.SVGImage(options);
   };
 
-  TheGraph.factories.createCanvas = function(options) {
+  TheGraph.factories.createCanvas = function (options) {
     return React.DOM.canvas(options);
   };
 
-  TheGraph.factories.createSvg = function(options, content) {
+  TheGraph.factories.createSvg = function (options, content) {
 
     var args = [options];
 
@@ -15012,12 +15127,15 @@ module.exports.register = function (context) {
 
     return React.DOM.svg.apply(React.DOM.svg, args);
   };
-  
-  TheGraph.getOffset = function(domNode){
-    var getElementOffset = function(element){
-      var offset = { top: 0, left: 0},
-          parentOffset;
-      if(!element){
+
+  TheGraph.getOffset = function (domNode) {
+    var getElementOffset = function (element) {
+      var offset = {
+          top: 0,
+          left: 0
+        },
+        parentOffset;
+      if (!element) {
         return offset;
       }
       offset.top += (element.offsetTop || 0);
@@ -15027,14 +15145,13 @@ module.exports.register = function (context) {
       offset.left += parentOffset.left;
       return offset;
     };
-    try{
-      return getElementOffset( domNode );
-    }catch(e){
+    try {
+      return getElementOffset(domNode);
+    } catch (e) {
       return getElementOffset();
     }
   };
 
 };
-
 },{}]},{},[16])(16)
 });

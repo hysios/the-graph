@@ -2,6 +2,10 @@ module.exports.register = function (context) {
 
   var TheGraph = context.TheGraph;
 
+  var unwrap = function (n) {
+    return n;
+  }
+
   TheGraph.config.app = {
     container: {
       className: "the-graph-app",
@@ -67,10 +71,10 @@ module.exports.register = function (context) {
     mixins.push(React.Animate);
   }
 
-  TheGraph.App = React.createFactory( React.createClass({
+  TheGraph.App = React.createFactory(React.createClass({
     displayName: "TheGraphApp",
     mixins: mixins,
-    getInitialState: function() {
+    getInitialState: function () {
       // Autofit
       var fit = TheGraph.findFit(this.props.graph, this.props.width, this.props.height);
 
@@ -104,27 +108,30 @@ module.exports.register = function (context) {
       }
 
       // Safari is wheelDeltaY
-      this.zoomFactor += event.deltaY ? event.deltaY : 0-event.wheelDeltaY;
+      this.zoomFactor += event.deltaY ? event.deltaY : 0 - event.wheelDeltaY;
       this.zoomX = event.clientX;
       this.zoomY = event.clientY;
       requestAnimationFrame(this.scheduleWheelZoom);
     },
     scheduleWheelZoom: function () {
-      if (isNaN(this.zoomFactor)) { return; }
+      if (isNaN(this.zoomFactor)) {
+        return;
+      }
 
       // Speed limit
-      var zoomFactor = this.zoomFactor/-500;
+      var zoomFactor = this.zoomFactor / -500;
       zoomFactor = Math.min(0.5, Math.max(-0.5, zoomFactor));
       var scale = this.state.scale + (this.state.scale * zoomFactor);
       this.zoomFactor = 0;
 
       if (scale < this.state.minZoom) {
         scale = this.state.minZoom;
-      }
-      else if (scale > this.state.maxZoom) {
+      } else if (scale > this.state.maxZoom) {
         scale = this.state.maxZoom;
       }
-      if (scale === this.state.scale) { return; }
+      if (scale === this.state.scale) {
+        return;
+      }
 
       // Zoom and pan transform-origin equivalent
       var scaleD = scale / this.state.scale;
@@ -206,7 +213,9 @@ module.exports.register = function (context) {
       domNode.addEventListener("trackend", this.onTrackEnd);
     },
     onTrack: function (event) {
-      if ( this.pinching ) { return; }
+      if (this.pinching) {
+        return;
+      }
       this.setState({
         x: this.state.x + event.ddx,
         y: this.state.y + event.ddy
@@ -242,7 +251,7 @@ module.exports.register = function (context) {
 
       // Don't go over right edge
       var x = event.detail.x + 10;
-      var width = tooltip.length*6;
+      var width = tooltip.length * 6;
       if (x + width > this.props.width) {
         x = event.detail.x - width - 10;
       }
@@ -272,12 +281,13 @@ module.exports.register = function (context) {
       var duration = TheGraph.config.focusAnimationDuration;
       var fit = TheGraph.findNodeFit(node, this.state.width, this.state.height);
       var start_point = {
-        x: -(this.state.x - this.state.width / 2) / this.state.scale,
-        y: -(this.state.y - this.state.height / 2) / this.state.scale,
-      }, end_point = {
-        x: node.metadata.x,
-        y: node.metadata.y,
-      };
+          x: -(this.state.x - this.state.width / 2) / this.state.scale,
+          y: -(this.state.y - this.state.height / 2) / this.state.scale,
+        },
+        end_point = {
+          x: node.metadata.x,
+          y: node.metadata.y,
+        };
       var graphfit = TheGraph.findAreaFit(start_point, end_point, this.state.width, this.state.height);
       var scale_ratio_1 = Math.abs(graphfit.scale - this.state.scale);
       var scale_ratio_2 = Math.abs(fit.scale - graphfit.scale);
@@ -285,7 +295,11 @@ module.exports.register = function (context) {
 
       // Animation not available, jump right there
       if (!this.animate) {
-        this.setState({ x: fit.x, y: fit.y, scale: fit.scale });
+        this.setState({
+          x: fit.x,
+          y: fit.y,
+          scale: fit.scale
+        });
         return;
       }
 
@@ -294,7 +308,7 @@ module.exports.register = function (context) {
         x: graphfit.x,
         y: graphfit.y,
         scale: graphfit.scale,
-      }, duration * (scale_ratio_1 / scale_ratio_diff), 'in-quint', function() {
+      }, duration * (scale_ratio_1 / scale_ratio_diff), 'in-quint', function () {
         this.animate({
           x: fit.x,
           y: fit.y,
@@ -311,7 +325,10 @@ module.exports.register = function (context) {
       var domNode = ReactDOM.findDOMNode(this);
 
       // Set up PolymerGestures for app and all children
-      var noop = function(){};
+      var noop = function () {};
+
+      // deprecate: PolymerGestures
+      /*
       PolymerGestures.addEventListener(domNode, "up", noop);
       PolymerGestures.addEventListener(domNode, "down", noop);
       PolymerGestures.addEventListener(domNode, "tap", noop);
@@ -319,6 +336,7 @@ module.exports.register = function (context) {
       PolymerGestures.addEventListener(domNode, "track", noop);
       PolymerGestures.addEventListener(domNode, "trackend", noop);
       PolymerGestures.addEventListener(domNode, "hold", noop);
+      */
 
       // Unselect edges and nodes
       if (this.props.onNodeSelection) {
@@ -329,24 +347,26 @@ module.exports.register = function (context) {
       var hammertime;
       if (Hammer) {
         hammertime = new Hammer(domNode, {});
-        hammertime.get('pinch').set({ enable: true });
+        hammertime.get('pinch').set({
+          enable: true
+        });
       }
 
       // Pointer gesture event for pan
       domNode.addEventListener("trackstart", this.onTrackStart);
 
       var isTouchDevice = 'ontouchstart' in document.documentElement;
-      if( isTouchDevice && hammertime ){
+      if (isTouchDevice && hammertime) {
         hammertime.on("pinchstart", this.onTransformStart);
         hammertime.on("pinch", this.onTransform);
         hammertime.on("pinchend", this.onTransformEnd);
       }
 
       // Wheel to zoom
-      if (domNode.onwheel!==undefined) {
+      if (domNode.onwheel !== undefined) {
         // Chrome and Firefox
         domNode.addEventListener("wheel", this.onWheel);
-      } else if (domNode.onmousewheel!==undefined) {
+      } else if (domNode.onmousewheel !== undefined) {
         // Safari
         domNode.addEventListener("mousewheel", this.onWheel);
       }
@@ -358,11 +378,11 @@ module.exports.register = function (context) {
       // Edge preview
       domNode.addEventListener("the-graph-edge-start", this.edgeStart);
 
-      domNode.addEventListener("contextmenu",this.onShowContext);
+      domNode.addEventListener("contextmenu", this.onShowContext);
 
       // Start zoom from middle if zoom before mouse move
-      this.mouseX = Math.floor( this.props.width/2 );
-      this.mouseY = Math.floor( this.props.height/2 );
+      this.mouseX = Math.floor(this.props.width / 2);
+      this.mouseY = Math.floor(this.props.height / 2);
 
       // HACK metaKey global for taps https://github.com/Polymer/PointerGestures/issues/29
       document.addEventListener('keydown', this.keyDown);
@@ -382,7 +402,9 @@ module.exports.register = function (context) {
     onShowContext: function (event) {
       event.preventDefault();
       event.stopPropagation();
-      if (event.preventTap) { event.preventTap(); }
+      if (event.preventTap) {
+        event.preventTap();
+      }
 
       // Get mouse position
       var x = event.x || event.clientX || 0;
@@ -406,49 +428,49 @@ module.exports.register = function (context) {
       }
 
       var key = event.keyCode,
-          hotKeys = {
-            // Delete
-            46: function () {
-              var graph = this.refs.graph.state.graph,
-                  selectedNodes = this.refs.graph.state.selectedNodes,
-                  selectedEdges = this.refs.graph.state.selectedEdges,
-                  menus = this.props.menus,
-                  menuOption = null,
-                  menuAction = null,
-                  nodeKey = null,
-                  node = null,
-                  edge = null;
+        hotKeys = {
+          // Delete
+          46: function () {
+            var graph = this.refs.graph.state.graph,
+              selectedNodes = this.refs.graph.state.selectedNodes,
+              selectedEdges = this.refs.graph.state.selectedEdges,
+              menus = this.props.menus,
+              menuOption = null,
+              menuAction = null,
+              nodeKey = null,
+              node = null,
+              edge = null;
 
-              for (nodeKey in selectedNodes) {
-                if (selectedNodes.hasOwnProperty(nodeKey)) {
-                  node = graph.getNode(nodeKey);
-                  menus.node.actions.delete(graph, nodeKey, node);
-                }
+            for (nodeKey in selectedNodes) {
+              if (selectedNodes.hasOwnProperty(nodeKey)) {
+                node = graph.getNode(nodeKey);
+                menus.node.actions.delete(graph, nodeKey, node);
               }
-              selectedEdges.map(function (edge) {
-                menus.edge.actions.delete(graph, null, edge);
-              });
-            }.bind(this),
-            // f for fit
-            70: function () {
-              this.triggerFit();
-            }.bind(this),
-            // s for selected
-            83: function () {
-              var graph = this.refs.graph.state.graph,
-                  selectedNodes = this.refs.graph.state.selectedNodes,
-                  nodeKey = null,
-                  node = null;
+            }
+            selectedEdges.map(function (edge) {
+              menus.edge.actions.delete(graph, null, edge);
+            });
+          }.bind(this),
+          // f for fit
+          70: function () {
+            this.triggerFit();
+          }.bind(this),
+          // s for selected
+          83: function () {
+            var graph = this.refs.graph.state.graph,
+              selectedNodes = this.refs.graph.state.selectedNodes,
+              nodeKey = null,
+              node = null;
 
-              for (nodeKey in selectedNodes) {
-                if (selectedNodes.hasOwnProperty(nodeKey)) {
-                  node = graph.getNode(nodeKey);
-                  this.focusNode(node);
-                  break;
-                }
+            for (nodeKey in selectedNodes) {
+              if (selectedNodes.hasOwnProperty(nodeKey)) {
+                node = graph.getNode(nodeKey);
+                this.focusNode(node);
+                break;
               }
-            }.bind(this)
-          };
+            }
+          }.bind(this)
+        };
 
       if (hotKeys[key]) {
         hotKeys[key]();
@@ -456,7 +478,7 @@ module.exports.register = function (context) {
     },
     keyUp: function (event) {
       // Escape
-      if (event.keyCode===27) {
+      if (event.keyCode === 27) {
         if (!this.refs.graph) {
           return;
         }
@@ -477,11 +499,13 @@ module.exports.register = function (context) {
     },
     componentDidUpdate: function (prevProps, prevState) {
       this.renderCanvas(this.bgContext);
-      if (!prevState || prevState.x!==this.state.x || prevState.y!==this.state.y || prevState.scale!==this.state.scale) {
+      if (!prevState || prevState.x !== this.state.x || prevState.y !== this.state.y || prevState.scale !== this.state.scale) {
         this.onPanScale();
       }
     },
     renderCanvas: function (c) {
+      console.log('renderCanvas', c)
+
       // Comment this line to go plaid
       c.clearRect(0, 0, this.state.width, this.state.height);
 
@@ -494,15 +518,15 @@ module.exports.register = function (context) {
       var cols = Math.floor(this.state.width / g) + 1;
       var row = Math.floor(this.state.height / g) + 1;
       // Origin row/col index
-      var oc = Math.floor(this.state.x / g) + (this.state.x<0 ? 1 : 0);
-      var or = Math.floor(this.state.y / g) + (this.state.y<0 ? 1 : 0);
+      var oc = Math.floor(this.state.x / g) + (this.state.x < 0 ? 1 : 0);
+      var or = Math.floor(this.state.y / g) + (this.state.y < 0 ? 1 : 0);
 
       while (row--) {
         var col = cols;
         while (col--) {
-          var x = Math.round(col*g+dx);
-          var y = Math.round(row*g+dy);
-          if ((oc-col)%3===0 && (or-row)%3===0) {
+          var x = Math.round(col * g + dx);
+          var y = Math.round(row * g + dy);
+          if ((oc - col) % 3 === 0 && (or - row) % 3 === 0) {
             // 3x grid
             c.fillStyle = "white";
             c.fillRect(x, y, 1, 1);
@@ -517,26 +541,26 @@ module.exports.register = function (context) {
     },
 
     getContext: function (menu, options, hide) {
-        return TheGraph.Menu({
-            menu: menu,
-            options: options,
-            triggerHideContext: hide,
-            label: "Hello",
-            graph: this.props.graph,
-            node: this,
-            ports: [],
-            process: [],
-            processKey: null,
-            x: options.x,
-            y: options.y,
-            nodeWidth: this.props.width,
-            nodeHeight: this.props.height,
-            deltaX: 0,
-            deltaY: 0,
-            highlightPort: false
-        });
+      return TheGraph.Menu({
+        menu: menu,
+        options: options,
+        triggerHideContext: hide,
+        label: "Hello",
+        graph: this.props.graph,
+        node: this,
+        ports: [],
+        process: [],
+        processKey: null,
+        x: options.x,
+        y: options.y,
+        nodeWidth: this.props.width,
+        nodeHeight: this.props.height,
+        deltaX: 0,
+        deltaY: 0,
+        highlightPort: false
+      });
     },
-    render: function() {
+    render: function () {
       // console.timeEnd("App.render");
       // console.time("App.render");
 
@@ -544,12 +568,12 @@ module.exports.register = function (context) {
       var sc = this.state.scale;
       var x = this.state.x;
       var y = this.state.y;
-      var transform = "matrix("+sc+",0,0,"+sc+","+x+","+y+")";
+      var transform = "matrix(" + sc + ",0,0," + sc + "," + x + "," + y + ")";
 
-      var scaleClass = sc > TheGraph.zbpBig ? "big" : ( sc > TheGraph.zbpNormal ? "normal" : "small");
+      var scaleClass = sc > TheGraph.zbpBig ? "big" : (sc > TheGraph.zbpNormal ? "normal" : "small");
 
       var contextMenu, contextModal;
-      if ( this.state.contextMenu ) {
+      if (this.state.contextMenu) {
         var options = this.state.contextMenu;
         var menu = this.props.getMenuDef(options);
         if (menu) {
@@ -558,7 +582,7 @@ module.exports.register = function (context) {
       }
       if (contextMenu) {
 
-        var modalBGOptions ={
+        var modalBGOptions = {
           width: this.state.width,
           height: this.state.height,
           triggerHideContext: this.hideContext,
@@ -585,7 +609,9 @@ module.exports.register = function (context) {
       graphElementOptions = TheGraph.merge(TheGraph.config.app.graph, graphElementOptions);
       var graphElement = TheGraph.factories.app.createAppGraph.call(this, graphElementOptions);
 
-      var svgGroupOptions = TheGraph.merge(TheGraph.config.app.svgGroup, { transform: transform });
+      var svgGroupOptions = TheGraph.merge(TheGraph.config.app.svgGroup, {
+        transform: transform
+      });
       var svgGroup = TheGraph.factories.app.createAppSvgGroup.call(this, svgGroupOptions, [graphElement]);
 
       var tooltipOptions = {
@@ -598,7 +624,9 @@ module.exports.register = function (context) {
       tooltipOptions = TheGraph.merge(TheGraph.config.app.tooltip, tooltipOptions);
       var tooltip = TheGraph.factories.app.createAppTooltip.call(this, tooltipOptions);
 
-      var modalGroupOptions = TheGraph.merge(TheGraph.config.app.modal, { children: contextModal });
+      var modalGroupOptions = TheGraph.merge(TheGraph.config.app.modal, {
+        children: contextModal
+      });
       var modalGroup = TheGraph.factories.app.createAppModalGroup.call(this, modalGroupOptions);
 
       var svgContents = [
@@ -607,17 +635,28 @@ module.exports.register = function (context) {
         modalGroup
       ];
 
-      var svgOptions = TheGraph.merge(TheGraph.config.app.svg, { width: this.state.width, height: this.state.height });
+      var svgOptions = TheGraph.merge(TheGraph.config.app.svg, {
+        width: this.state.width,
+        height: this.state.height
+      });
       var svg = TheGraph.factories.app.createAppSvg.call(this, svgOptions, svgContents);
 
-      var canvasOptions = TheGraph.merge(TheGraph.config.app.canvas, { width: this.state.width, height: this.state.height });
+      var canvasOptions = TheGraph.merge(TheGraph.config.app.canvas, {
+        width: this.state.width,
+        height: this.state.height
+      });
       var canvas = TheGraph.factories.app.createAppCanvas.call(this, canvasOptions);
 
       var appContents = [
         canvas,
         svg
       ];
-      var containerOptions = TheGraph.merge(TheGraph.config.app.container, { style: { width: this.state.width, height: this.state.height } });
+      var containerOptions = TheGraph.merge(TheGraph.config.app.container, {
+        style: {
+          width: this.state.width,
+          height: this.state.height
+        }
+      });
       containerOptions.className += " " + scaleClass;
       return TheGraph.factories.app.createAppContainer.call(this, containerOptions, appContents);
     }

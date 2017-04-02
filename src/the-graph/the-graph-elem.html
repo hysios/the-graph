@@ -9,6 +9,8 @@
   </template>
 
   <script>
+    console.log('GestureEventListeners', Polymer.GestureEventListeners)
+
     class TheGraphElem extends Polymer.Element {
       static get is() {
         return 'the-graph-elem'
@@ -160,23 +162,30 @@
       }
 
       _graphChanged(graph, oldGraph) {
-        this.log('graphChanged')
+        this.log('graphChanged', graph, oldGraph)
         if (oldGraph && oldGraph.removeListener) {
           oldGraph.removeListener("endTransaction", this.fireChanged);
         }
         // Listen for graph changes
-        graph.on("endTransaction", this.fireChanged.bind(this));
+        var _graph = this.graph
+        this.log('add observers/listeners to _graph', _graph)
 
-        // Listen for autolayout changes
-        if (this.autolayout) {
-          graph.on('addNode', this.triggerAutolayout.bind(this));
-          graph.on('removeNode', this.triggerAutolayout.bind(this));
-          graph.on('addInport', this.triggerAutolayout.bind(this));
-          graph.on('removeInport', this.triggerAutolayout.bind(this));
-          graph.on('addOutport', this.triggerAutolayout.bind(this));
-          graph.on('removeOutport', this.triggerAutolayout.bind(this));
-          graph.on('addEdge', this.triggerAutolayout.bind(this));
-          graph.on('removeEdge', this.triggerAutolayout.bind(this));
+        if (_graph) {
+          _graph.on("endTransaction", this.fireChanged.bind(this));
+
+          // Listen for autolayout changes
+          if (this.autolayout) {
+            _graph.on('addNode', this.triggerAutolayout.bind(this));
+            _graph.on('removeNode', this.triggerAutolayout.bind(this));
+            _graph.on('addInport', this.triggerAutolayout.bind(this));
+            _graph.on('removeInport', this.triggerAutolayout.bind(this));
+            _graph.on('addOutport', this.triggerAutolayout.bind(this));
+            _graph.on('removeOutport', this.triggerAutolayout.bind(this));
+            _graph.on('addEdge', this.triggerAutolayout.bind(this));
+            _graph.on('removeEdge', this.triggerAutolayout.bind(this));
+          }
+        } else {
+          console.error('no graph to add observers/listeners to yet...')
         }
 
         if (this.appView) {
@@ -186,25 +195,32 @@
 
         // Setup app
         this.$.svgcontainer.innerHTML = "";
+
+        var app = {
+          graph: graph,
+          width: this.width,
+          minZoom: this.minZoom,
+          maxZoom: this.maxZoom,
+          height: this.height,
+          library: this.library,
+          menus: this.menus,
+          editable: this.editable,
+          onEdgeSelection: this.onEdgeSelection.bind(this),
+          onNodeSelection: this.onNodeSelection.bind(this),
+          onPanScale: this.onPanScale.bind(this),
+          getMenuDef: this.getMenuDef,
+          displaySelectionGroup: this.displaySelectionGroup,
+          forceSelection: this.forceSelection,
+          offsetY: this.offsetY,
+          offsetX: this.offsetX
+        }
+        console.log('app', app)
+        if (!graph) {
+          throw new Error('no app to render!!')
+        }
+
         this.appView = ReactDOM.render(
-          window.TheGraph.App({
-            graph: graph,
-            width: this.width,
-            minZoom: this.minZoom,
-            maxZoom: this.maxZoom,
-            height: this.height,
-            library: this.library,
-            menus: this.menus,
-            editable: this.editable,
-            onEdgeSelection: this.onEdgeSelection.bind(this),
-            onNodeSelection: this.onNodeSelection.bind(this),
-            onPanScale: this.onPanScale.bind(this),
-            getMenuDef: this.getMenuDef,
-            displaySelectionGroup: this.displaySelectionGroup,
-            forceSelection: this.forceSelection,
-            offsetY: this.offsetY,
-            offsetX: this.offsetX
-          }),
+          window.TheGraph.App(app),
           this.$.svgcontainer
         );
         this.graphView = this.appView.refs.graph;

@@ -95,6 +95,120 @@ _selectedChanged(selected, oldSelected) {
 }
 ```
 
+## Current issues
+
+`PolymerGestures is not defined` in `the-graph-node.js`
+
+```js
+  // PolymerGestures monkeypatch
+  function patchGestures() {
+    PolymerGestures.dispatcher.gestures.forEach( function (gesture) {
+```
+
+[deprecated: polymer-gestures](https://github.com/Polymer/polymer-gestures)
+
+See [2.0 gesture-events](https://www.polymer-project.org/2.0/docs/devguide/gesture-events)
+
+Use `Polymer.GestureEventListeners` mixin.
+
+```html
+<link rel="import" href="../bower_components/polymer/lib/mixins/gesture-event-listeners.html">
+```
+
+Solution: *For now we are removing support for Gesture events...*
+
+### The Graph elem: event listeners
+
+Event listeners not correct. Can we still use `on` or need to use another mechanism/API?
+
+```js
+  _graphChanged(graph, oldGraph) {
+    this.log('graphChanged', graph, oldGraph)
+    if (oldGraph && oldGraph.removeListener) {
+      oldGraph.removeListener("endTransaction", this.fireChanged);
+    }
+    // Listen for graph changes
+    var _graph = this.graph
+    this.log('add observers/listeners to _graph', _graph)
+    _graph.on("endTransaction", this.fireChanged.bind(this));
+```
+
+### the-graph-app
+
+The polymer class for `the-graph-elem` calls the React element:
+
+```js
+var app = {
+  graph: graph,
+  width: this.width,
+  minZoom: this.minZoom,
+  maxZoom: this.maxZoom,
+  height: this.height,
+  library: this.library,
+  menus: this.menus,
+  editable: this.editable,
+  onEdgeSelection: this.onEdgeSelection.bind(this),
+  onNodeSelection: this.onNodeSelection.bind(this),
+  onPanScale: this.onPanScale.bind(this),
+  getMenuDef: this.getMenuDef,
+  displaySelectionGroup: this.displaySelectionGroup,
+  forceSelection: this.forceSelection,
+  offsetY: this.offsetY,
+  offsetX: this.offsetX
+}
+console.log('app', app)
+if (!graph) {
+  throw new Error('no app to render!!')
+}
+
+this.appView = ReactDOM.render(
+  window.TheGraph.App(app),
+  this.$.svgcontainer
+);
+this.graphView = this.appView.refs.graph;
+```
+
+We need to debug how `TheGraph.App` receives the `app` and maintains/renders it in React.
+
+```js
+TheGraph.App = React.createFactory(React.createClass({
+  ...
+```
+
+#### undefined unwrap
+
+Trying to shield unwrap if not defined... what is it trying to do?
+I think it is using `findDOMNode` on a React `ref` (ie `refs.canvas`)
+
+```js
+      if (typeof unwrap !== 'undefined') {
+        this.bgCanvas = unwrap(ReactDOM.findDOMNode(this.refs.canvas));
+        this.bgContext = unwrap(this.bgCanvas.getContext('2d'));
+      } else {
+        console.error('no unwrap!')
+      }
+```
+
+From `polymer/polymer.js`
+
+```js
+  // ShadowDOM
+  ShadowDOMPolyfill = null;
+  wrap = unwrap = function(n){
+    return n;
+  };
+```
+
+Solution: We have simply added this identity funtion for now!
+
+#### undefined `c` (canvas)
+
+```js
+  renderCanvas: function (c) {
+    // Comment this line to go plaid
+    c.clearRect(0, 0, this.state.width, this.state.height);
+```
+
 ## Getting started
 
 First read these articles!!
