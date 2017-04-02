@@ -32,6 +32,7 @@
           menus: {
             type: Object,
             value: null,
+            observer: '_menusChanged'
           },
           library: {
             type: Object,
@@ -64,7 +65,8 @@
           },
           editable: {
             type: Boolean,
-            value: true
+            value: true,
+            // observer: '_editableChanged'
           },
           autolayout: {
             type: Boolean,
@@ -74,11 +76,12 @@
           grid: {
             type: Number,
             value: 72,
-            observer: '_gridChanged'
+            // observer: '_gridChanged'
           },
           snap: {
             type: Number,
-            value: 36
+            value: 36,
+            // observer: '_snapChanged'
           },
           theme: {
             type: String,
@@ -87,31 +90,39 @@
           },
           selectedNodes: {
             type: Array,
-            value: []
+            value: [],
+            observer: '_selectedNodesChanged'
           },
           selectedNodesHash: {
             type: Object,
-            value: {}
+            value: {},
+            observer: '_selectedNodesHashChanged'
           },
           errorNodes: {
             type: Object,
-            value: {}
+            value: {},
+            observer: '_errorNodesChanged'
           },
           selectedEdges: {
             type: Array,
-            value: []
+            value: [],
+            observer: '_selectedEdgesChanged'
           },
           animatedEdges: {
             type: Array,
-            value: []
+            value: [],
+            observer: '_animatedEdgesChanged'
           },
           displaySelectionGroup: {
             type: Boolean,
-            value: true
+            value: true,
+            observer: '_displaySelectionGroupChanged'
+
           },
           forceSelection: {
             type: Boolean,
-            value: false
+            value: false,
+            observer: '_forceSelectionChanged'
           },
           offsetY: {
             type: Number,
@@ -154,6 +165,7 @@
       //   this.log('ready')
       //   // this._themeChanged();
       // }
+
       connectedCallback() {
         super.connectedCallback();
         this.log('connected')
@@ -176,18 +188,21 @@
         this.log('add observers/listeners to _graph', _graph)
 
         if (_graph) {
+          this.log('ADDING observers/listeners to graph', _graph)
           _graph.on("endTransaction", this.fireChanged.bind(this));
 
           // Listen for autolayout changes
           if (this.autolayout) {
-            _graph.on('addNode', this.triggerAutolayout.bind(this));
-            _graph.on('removeNode', this.triggerAutolayout.bind(this));
-            _graph.on('addInport', this.triggerAutolayout.bind(this));
-            _graph.on('removeInport', this.triggerAutolayout.bind(this));
-            _graph.on('addOutport', this.triggerAutolayout.bind(this));
-            _graph.on('removeOutport', this.triggerAutolayout.bind(this));
-            _graph.on('addEdge', this.triggerAutolayout.bind(this));
-            _graph.on('removeEdge', this.triggerAutolayout.bind(this));
+            var triggerAutolayout = this.triggerAutolayout.bind(this)
+
+            _graph.on('addNode', triggerAutolayout);
+            _graph.on('removeNode', triggerAutolayout);
+            _graph.on('addInport', triggerAutolayout);
+            _graph.on('removeInport', triggerAutolayout);
+            _graph.on('addOutport', triggerAutolayout);
+            _graph.on('removeOutport', triggerAutolayout);
+            _graph.on('addEdge', triggerAutolayout);
+            _graph.on('removeEdge', triggerAutolayout);
           }
         } else {
           console.error('no graph to add observers/listeners to yet...')
@@ -244,7 +259,7 @@
           if (this.selectedEdges.length > 0) {
             this.selectedEdges = [];
           }
-          this.fire('edges', this.selectedEdges);
+          this.dispatchEvent('edges', this.selectedEdges);
           return;
         }
         if (toggle) {
@@ -278,16 +293,35 @@
         } else {
           this.selectedNodes = [item];
         }
-        this.fire('nodes', this.selectedNodes);
+        var selectedNodesEvent = this._buildEvent('nodes', this.selectedNodes)
+        // https://dom.spec.whatwg.org/#interface-customevent
+        console.log('onNodeSelection - distach event: nodes', this.selectedNodes)
+        this.dispatchEvent(selectedNodesEvent);
+      }
+
+      _buildEvent(name, detail) {
+        return new CustomEvent(name, {
+          bubbles: true,
+          detail: detail
+        })
       }
 
       _selectedNodesChanged() {
+        console.log('selected nodes changed', this.selectedNodes)
         var selectedNodesHash = {};
         for (var i = 0, len = this.selectedNodes.length; i < len; i++) {
           selectedNodesHash[this.selectedNodes[i].id] = true;
         }
         this.selectedNodesHash = selectedNodesHash;
-        this.fire('nodes', this.selectedNodes);
+
+
+        // https://developer.mozilla.org/en-US/docs/Web/API/EventTarget/dispatchEvent
+        // https://developer.mozilla.org/en-US/docs/Web/API/Event
+
+        var selectedNodesEvent = this._buildEvent('nodes', this.selectedNodes)
+        // https://dom.spec.whatwg.org/#interface-customevent
+        console.log('onNodeSelection - distach event: nodes', this.selectedNodes)
+        this.dispatchEvent(selectedNodesEvent);
       }
 
       _selectedNodesHashChanged() {
@@ -309,7 +343,11 @@
           return;
         }
         this.graphView.setSelectedEdges(this.selectedEdges);
-        this.fire('edges', this.selectedEdges);
+
+        var selectedEdgesEvent = this._buildEvent('edges', this.selectedEdges)
+        // https://dom.spec.whatwg.org/#interface-customevent
+        console.log('selectedEdgesChanged - distach event: nodes', this.selectedEdges)
+        this.dispatchEvent(selectedEdgesEvent);
       }
 
       _animatedEdgesChanged() {
@@ -321,11 +359,11 @@
 
       // Graph changed event
       fireChanged(event) {
-        var event = new CustomEvent('changed', {
+        this.log('Graph changed event', event)
+        var changedEvent = new CustomEvent('changed', {
           bubbles: true
         })
-        // this.dispatchEvent('changed');
-        this.dispatchEvent(event);
+        this.dispatchEvent(changedEvent);
       }
 
       _autolayoutChanged(layout, oldLayout) {
@@ -336,15 +374,19 @@
         }
         // Only listen to changes that affect layout
         if (this.autolayout) {
-          this.graph.on('addNode', this.triggerAutolayout.bind(this));
-          this.graph.on('removeNode', this.triggerAutolayout.bind(this));
-          this.graph.on('addInport', this.triggerAutolayout.bind(this));
-          this.graph.on('removeInport', this.triggerAutolayout.bind(this));
-          this.graph.on('addOutport', this.triggerAutolayout.bind(this));
-          this.graph.on('removeOutport', this.triggerAutolayout.bind(this));
-          this.graph.on('addEdge', this.triggerAutolayout.bind(this));
-          this.graph.on('removeEdge', this.triggerAutolayout.bind(this));
+          this.log('Add graph on listeners for triggerAutolayout')
+          var triggerAutolayout = this.triggerAutolayout.bind(this);
+
+          this.graph.on('addNode', triggerAutolayout);
+          this.graph.on('removeNode', triggerAutolayout);
+          this.graph.on('addInport', triggerAutolayout);
+          this.graph.on('removeInport', triggerAutolayout);
+          this.graph.on('addOutport', triggerAutolayout);
+          this.graph.on('removeOutport', triggerAutolayout);
+          this.graph.on('addEdge', triggerAutolayout);
+          this.graph.on('removeEdge', triggerAutolayout);
         } else {
+          this.log('Remove graph on listeners for triggerAutolayout')
           this.graph.removeListener('addNode', this.triggerAutolayout);
           this.graph.removeListener('removeNode', this.triggerAutolayout);
           this.graph.removeListener('addInport', this.triggerAutolayout);
@@ -464,7 +506,7 @@
         return this.appView.state.scale;
       }
 
-      displaySelectionGroupChanged() {
+      _displaySelectionGroupChanged() {
         if (!this.graphView) {
           return;
         }

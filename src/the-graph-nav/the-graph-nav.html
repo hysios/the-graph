@@ -35,7 +35,7 @@
     <div id="viewrect"></div>
   </template>
   <script>
-    class TheGraphNav extends Polymer.Element {
+    class TheGraphNav extends Polymer.GestureEventListeners(Polymer.Element) {
       static get is() {
         return 'the-graph-nav'
       }
@@ -78,28 +78,50 @@
         console.log('the-graph-nav', ...args)
       }
 
-      ready() {
-        super.ready()
-        this.log('ready')
+      // ready() {
+      //   super.ready()
+      //   this.log('ready')
+      // }
+
+      connectedCallback() {
+        super.connectedCallback();
+        this.log('connectedCallback')
 
         this.viewrectangle = [0, 0, 500, 500];
         this.scaledviewrectangle = [0, 0, 200, 150];
         this.theme = "dark";
-      }
-      attached() {
+
         this.style.overflow = "hidden";
         this.style.cursor = "move";
         this.style.width = this.width + "px";
         this.style.height = this.height + "px";
 
         // HACK way to make PolymerGestures work for now
-        var noop = function () {};
-        PolymerGestures.addEventListener(this, "track", noop);
-        PolymerGestures.addEventListener(this, "trackend", noop);
-        PolymerGestures.addEventListener(this, "tap", noop);
+        var noop = function (event) {
+          console.log('some gesture', event)
+        };
+
+        console.log('GraphNav: set up event listeners')
+        // if (PolymerGestures) {
+        //   PolymerGestures.addEventListener(this, "track", noop);
+        //   PolymerGestures.addEventListener(this, "trackend", noop);
+        //   PolymerGestures.addEventListener(this, "tap", noop);
+        // } else {
+        //   console.log('no PolymerGestures to add events on')
+        // }
+
+        if (Polymer.Gestures) {
+          this.log('Polymer 2 Gestures! noop')
+          Polymer.Gestures.addListener(this, 'track', noop);
+          Polymer.Gestures.addListener(this, 'trackend', noop);
+          Polymer.Gestures.addListener(this, 'tap', noop);
+        } else {
+          this.log('missing Polymer.Gestures')
+        }
 
         // Pan graph by dragging map
-        this.addEventListener("track", function (event) {
+        this.addEventListener("track", (event) => {
+          console.log('track: pan graph by dragging', event)
           if (!this.editor) {
             return;
           }
@@ -114,14 +136,17 @@
           this.editor.pan = [Math.round(x), Math.round(y)];
 
           event.preventTap();
-        }.bind(this));
-        this.addEventListener("trackend", function (event) {
+        });
+
+        this.addEventListener("trackend", (event) => {
+          console.log('trackend: pan graph by dragging', event)
           // Don't pan graph
           event.stopPropagation();
-        }.bind(this));
+        });
 
         // Tap to fit
         this.addEventListener("tap", function () {
+          console.log('tap: nav', event)
           if (!this.editor) {
             return;
           }
@@ -137,7 +162,10 @@
       //   'editor.theme': 'editorThemeChanged'
       // }
 
-      editorChanged(oldEditor, newEditor) {}
+      editorChanged(editor, newEditor) {
+
+      }
+
       editorPanChanged() {
         if (!this.editor.pan) {
           return;

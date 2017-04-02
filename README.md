@@ -223,6 +223,20 @@ Most likely we should abandon usin `ready` method? This seems to go into infinit
   }
 ```
 
+### GraphNav
+
+We need to properly set up the observers for Polymer 2.0
+
+```js
+      // observe: {
+      //   'editor.scale': 'editorScaleChanged',
+      //   'editor.width': 'editorWidthChanged',
+      //   'editor.height': 'editorHeightChanged',
+      //   'editor.pan': 'editorPanChanged',
+      //   'editor.theme': 'editorThemeChanged'
+      // }
+```
+
 ## Getting started
 
 First read these articles!!

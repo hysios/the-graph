@@ -81,6 +81,7 @@ module.exports.register = function (context) {
 
   // PolymerGestures monkeypatch
   function patchGestures() {
+    console.log('patchGestures: currently disabled :(')
     // Polymer.Gestures.
 
     // DEPRECATED!!!
@@ -104,25 +105,31 @@ module.exports.register = function (context) {
       TheGraph.mixins.Tooltip
     ],
     componentDidMount: function () {
+      console.log('TheGraph.Node: componentDidMount', this.props)
       patchGestures();
       var domNode = ReactDOM.findDOMNode(this);
 
       // Dragging
+      console.log('add Eventlisteners', "trackstart", "tap", "contextmenu", "hold")
       domNode.addEventListener("trackstart", this.onTrackStart);
 
       // Tap to select
       if (this.props.onNodeSelection) {
         domNode.addEventListener("tap", this.onNodeSelection, true);
+      } else {
+        console.log('no onNodeSelection')
       }
 
       // Context menu
       if (this.props.showContext) {
         ReactDOM.findDOMNode(this).addEventListener("contextmenu", this.showContext);
         ReactDOM.findDOMNode(this).addEventListener("hold", this.showContext);
+      } else {
+        console.log('no showContext')
       }
-
     },
     onNodeSelection: function (event) {
+      console.log('Node: onNodeSelection', event)
       // Don't tap app (unselect)
       event.stopPropagation();
 
@@ -130,6 +137,7 @@ module.exports.register = function (context) {
       this.props.onNodeSelection(this.props.nodeID, this.props.node, toggle);
     },
     onTrackStart: function (event) {
+      console.log('Node: onTrackStart', event)
       // Don't drag graph
       event.stopPropagation();
 
@@ -158,6 +166,7 @@ module.exports.register = function (context) {
       }
     },
     onTrack: function (event) {
+      console.log('Node: onTrack', event)
       // Don't fire on graph
       event.stopPropagation();
 
@@ -184,6 +193,7 @@ module.exports.register = function (context) {
       }
     },
     onTrackEnd: function (event) {
+      console.log('Node: onTrackEnd', event)
       // Don't fire on graph
       event.stopPropagation();
 
@@ -352,6 +362,7 @@ module.exports.register = function (context) {
       );
     },
     render: function () {
+      console.log('Node: render')
       if (this.props.ports.dirty) {
         // This tag is set when an edge or iip changes port colors
         this.props.ports.dirty = false;
@@ -533,7 +544,7 @@ module.exports.register = function (context) {
         inportsGroup,
         outportsGroup,
         labelGroup,
-        sublabelGroup
+        sublabelGroup,
       ];
 
       var nodeOptions = {

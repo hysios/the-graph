@@ -1,5 +1,4 @@
 <!-- NOTICE: include 'the-graph-elem'' used in template -->
-<link rel="import" href="../../bower_components/polymer/lib/mixins/gesture-event-listeners.html">
 <link rel="import" href="../the-graph/the-graph-elem.html">
 
 <dom-module id="the-graph-editor" attributes="grid snap width height autolayout theme selectedNodes errorNodes selectedEdges animatedEdges onContextMenu displaySelectionGroup forceSelection"
@@ -108,10 +107,10 @@
         console.log('the-graph-EDITOR', ...args)
       }
 
-      ready() {
-        super.ready()
-        this.log('ready')
-      }
+      // ready() {
+      //   super.ready()
+      //   this.log('ready')
+      // }
 
       connectedCallback() {
         super.connectedCallback();
@@ -161,6 +160,7 @@
           }
           return defaultMenu;
         }
+        console.error('Ooops! No menu for getMenuDef', options, this.menus)
         return null;
       }
 
@@ -204,7 +204,7 @@
           return
         }
 
-        fbpGraph.graph.loadJSON(graph, function (err, graph) {
+        fbpGraph.graph.loadJSON(graph, (err, graph) => {
           console.log('graph loadJSON', graph)
           this.buildInitialLibrary(graph);
           this.fbpGraph = graph;
@@ -213,7 +213,7 @@
             bubbles: true
           })
           this.dispatchEvent(event);
-        }.bind(this));
+        })
       }
 
       buildInitialLibrary(fbpGraph) {

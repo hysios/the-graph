@@ -578,13 +578,17 @@ module.exports.register = function (context) {
       var transform = "matrix(" + sc + ",0,0," + sc + "," + x + "," + y + ")";
 
       var scaleClass = sc > TheGraph.zbpBig ? "big" : (sc > TheGraph.zbpNormal ? "normal" : "small");
-
+      var props = this.props
       var contextMenu, contextModal;
       if (this.state.contextMenu) {
         var options = this.state.contextMenu;
-        var menu = this.props.getMenuDef(options);
-        if (menu) {
-          contextMenu = options.element.getContext(menu, options, this.hideContext);
+        if (props.getMenuDef) {
+          var menu = props.getMenuDef(options);
+          if (menu) {
+            contextMenu = options.element.getContext(menu, options, this.hideContext);
+          }
+        } else {
+          console.log('no getMenuDef on props', props)
         }
       }
       if (contextMenu) {

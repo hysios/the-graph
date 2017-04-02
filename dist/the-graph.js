@@ -10990,6 +10990,7 @@ module.exports.register = function (context) {
     displayName: "TheGraphApp",
     mixins: mixins,
     getInitialState: function () {
+      console.log('App: getInitialState')
       // Autofit
       var fit = TheGraph.findFit(this.props.graph, this.props.width, this.props.height);
 
@@ -11193,6 +11194,7 @@ module.exports.register = function (context) {
       });
     },
     focusNode: function (node) {
+      console.log('App: focusNode')
       var duration = TheGraph.config.focusAnimationDuration;
       var fit = TheGraph.findNodeFit(node, this.state.width, this.state.height);
       var start_point = {
@@ -11237,6 +11239,7 @@ module.exports.register = function (context) {
       this.hideContext();
     },
     componentDidMount: function () {
+      console.log('App: componentDidMount')
       var domNode = ReactDOM.findDOMNode(this);
 
       // Set up PolymerGestures for app and all children
@@ -11410,9 +11413,11 @@ module.exports.register = function (context) {
       this.props.onEdgeSelection();
     },
     renderGraph: function () {
+      console.log('App: renderGraph')
       this.refs.graph.markDirty();
     },
     componentDidUpdate: function (prevProps, prevState) {
+      console.log('App: componentDidUpdate')
       this.renderCanvas(this.bgContext);
       if (!prevState || prevState.x !== this.state.x || prevState.y !== this.state.y || prevState.scale !== this.state.scale) {
         this.onPanScale();
@@ -11456,6 +11461,7 @@ module.exports.register = function (context) {
     },
 
     getContext: function (menu, options, hide) {
+      console.log('App: getContext')
       return TheGraph.Menu({
         menu: menu,
         options: options,
@@ -11476,6 +11482,7 @@ module.exports.register = function (context) {
       });
     },
     render: function () {
+      console.log('App: render')
       // console.timeEnd("App.render");
       // console.time("App.render");
 
@@ -11486,13 +11493,17 @@ module.exports.register = function (context) {
       var transform = "matrix(" + sc + ",0,0," + sc + "," + x + "," + y + ")";
 
       var scaleClass = sc > TheGraph.zbpBig ? "big" : (sc > TheGraph.zbpNormal ? "normal" : "small");
-
+      var props = this.props
       var contextMenu, contextModal;
       if (this.state.contextMenu) {
         var options = this.state.contextMenu;
-        var menu = this.props.getMenuDef(options);
-        if (menu) {
-          contextMenu = options.element.getContext(menu, options, this.hideContext);
+        if (props.getMenuDef) {
+          var menu = props.getMenuDef(options);
+          if (menu) {
+            contextMenu = options.element.getContext(menu, options, this.hideContext);
+          }
+        } else {
+          console.log('no getMenuDef on props', props)
         }
       }
       if (contextMenu) {
@@ -13942,6 +13953,7 @@ module.exports.register = function (context) {
 
   // PolymerGestures monkeypatch
   function patchGestures() {
+    console.log('patchGestures: currently disabled :(')
     // Polymer.Gestures.
 
     // DEPRECATED!!!
@@ -13965,25 +13977,31 @@ module.exports.register = function (context) {
       TheGraph.mixins.Tooltip
     ],
     componentDidMount: function () {
+      console.log('TheGraph.Node: componentDidMount', this.props)
       patchGestures();
       var domNode = ReactDOM.findDOMNode(this);
 
       // Dragging
+      console.log('add Eventlisteners', "trackstart", "tap", "contextmenu", "hold")
       domNode.addEventListener("trackstart", this.onTrackStart);
 
       // Tap to select
       if (this.props.onNodeSelection) {
         domNode.addEventListener("tap", this.onNodeSelection, true);
+      } else {
+        console.log('no onNodeSelection')
       }
 
       // Context menu
       if (this.props.showContext) {
         ReactDOM.findDOMNode(this).addEventListener("contextmenu", this.showContext);
         ReactDOM.findDOMNode(this).addEventListener("hold", this.showContext);
+      } else {
+        console.log('no showContext')
       }
-
     },
     onNodeSelection: function (event) {
+      console.log('Node: onNodeSelection', event)
       // Don't tap app (unselect)
       event.stopPropagation();
 
@@ -13991,6 +14009,7 @@ module.exports.register = function (context) {
       this.props.onNodeSelection(this.props.nodeID, this.props.node, toggle);
     },
     onTrackStart: function (event) {
+      console.log('Node: onTrackStart', event)
       // Don't drag graph
       event.stopPropagation();
 
@@ -14019,6 +14038,7 @@ module.exports.register = function (context) {
       }
     },
     onTrack: function (event) {
+      console.log('Node: onTrack', event)
       // Don't fire on graph
       event.stopPropagation();
 
@@ -14045,6 +14065,7 @@ module.exports.register = function (context) {
       }
     },
     onTrackEnd: function (event) {
+      console.log('Node: onTrackEnd', event)
       // Don't fire on graph
       event.stopPropagation();
 
@@ -14213,6 +14234,7 @@ module.exports.register = function (context) {
       );
     },
     render: function () {
+      console.log('Node: render')
       if (this.props.ports.dirty) {
         // This tag is set when an edge or iip changes port colors
         this.props.ports.dirty = false;
@@ -14394,7 +14416,7 @@ module.exports.register = function (context) {
         inportsGroup,
         outportsGroup,
         labelGroup,
-        sublabelGroup
+        sublabelGroup,
       ];
 
       var nodeOptions = {
