@@ -225,16 +225,23 @@ Most likely we should abandon usin `ready` method? This seems to go into infinit
 
 ### GraphNav
 
-We need to properly set up the observers for Polymer 2.0
+We need to properly set up the [observers for Polymer 2.0](https://www.polymer-project.org/2.0/docs/devguide/observers)
+
+
 
 ```js
-      // observe: {
-      //   'editor.scale': 'editorScaleChanged',
-      //   'editor.width': 'editorWidthChanged',
-      //   'editor.height': 'editorHeightChanged',
-      //   'editor.pan': 'editorPanChanged',
-      //   'editor.theme': 'editorThemeChanged'
-      // }
+  // static get observers() {
+  //   return [
+  //     'editorScaleChanged(editorScale)',
+  //   ];
+  // }
+  // observe: {
+  //   'editor.scale': 'editorScaleChanged',
+  //   'editor.width': 'editorWidthChanged',
+  //   'editor.height': 'editorHeightChanged',
+  //   'editor.pan': 'editorPanChanged',
+  //   'editor.theme': 'editorThemeChanged'
+  // }
 ```
 
 ## Getting started

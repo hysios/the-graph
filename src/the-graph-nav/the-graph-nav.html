@@ -69,6 +69,19 @@
         }
       }
 
+      // static get observers() {
+      //   return [
+      //     'editorScaleChanged(editorScale)',
+      //   ];
+      // }
+      // observe: {
+      //   'editor.scale': 'editorScaleChanged',
+      //   'editor.width': 'editorWidthChanged',
+      //   'editor.height': 'editorHeightChanged',
+      //   'editor.pan': 'editorPanChanged',
+      //   'editor.theme': 'editorThemeChanged'
+      // }
+
       constructor() {
         super()
         this.log('created')
@@ -153,14 +166,6 @@
           this.editor.triggerFit();
         });
       }
-
-      // observe: {
-      //   'editor.scale': 'editorScaleChanged',
-      //   'editor.width': 'editorWidthChanged',
-      //   'editor.height': 'editorHeightChanged',
-      //   'editor.pan': 'editorPanChanged',
-      //   'editor.theme': 'editorThemeChanged'
-      // }
 
       editorChanged(editor, newEditor) {
 
