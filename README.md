@@ -227,14 +227,33 @@ Most likely we should abandon usin `ready` method? This seems to go into infinit
 
 We need to properly set up the [observers for Polymer 2.0](https://www.polymer-project.org/2.0/docs/devguide/observers)
 
+Observers are methods invoked when observable changes occur to the element's data.
+*Complex observers* can observe one or more properties or `paths`.
 
+#### Observe sub-property changes
+
+To observe changes in object sub-properties:
+
+- Define an observers array.
+- Add an item to the observers array. The item must be a method name followed by a comma-separated list of one or more paths. For example, onNameChange(dog.name) for one path, or onNameChange(dog.name, cat.name) for multiple paths. Each path is a sub-property that you want to observe.
+- Define the method in your element prototype. When the method is called, the argument to the method is the new value of the sub-property.
 
 ```js
-  // static get observers() {
-  //   return [
-  //     'editorScaleChanged(editorScale)',
-  //   ];
-  // }
+  // Observe the name sub-property on the user object
+  static get observers() {
+    return [
+        'userNameChanged(user.name)'
+    ]
+  }
+
+  userNameChanged: function(name) {
+    if (name) {
+      // ...
+```
+
+So the following old Polymer observers
+
+```js
   // observe: {
   //   'editor.scale': 'editorScaleChanged',
   //   'editor.width': 'editorWidthChanged',
@@ -242,6 +261,20 @@ We need to properly set up the [observers for Polymer 2.0](https://www.polymer-p
   //   'editor.pan': 'editorPanChanged',
   //   'editor.theme': 'editorThemeChanged'
   // }
+```
+
+Will become these in 2.0
+
+```js
+static get observers() {
+  return [
+    '_editorScaleChanged(editor.scale)',
+    '_editorWidthChanged(editor.width)',
+    '_editorHeightChanged(editor.height)',
+    '_editorPanChanged(editor.pan)',
+    '_editorThemeChanged(editor.theme)'
+  ]
+}
 ```
 
 ## Getting started

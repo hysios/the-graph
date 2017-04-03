@@ -16,7 +16,20 @@
       }
 
       static get properties() {
+        // ALL these must be properties!!
+        // <the-graph-thumb id="thumb" graph="{{ editor.fbpGraph }}"
+        // thumbrectangle="{{thumbrectangle}}" width="{{width}}" height="{{height}}"
+        //   thumbscale="{{thumbscale}}" hide="{{hide}}" theme="{{ editor.theme }}">
+
         return {
+          graph: {
+            type: Object,
+            value: null
+          },
+          hide: {
+            type: Boolean,
+            value: false
+          },
           width: {
             type: Number,
             value: 200
@@ -24,6 +37,14 @@
           height: {
             type: Number,
             value: 150
+          },
+          thumbrectangle: {
+            type: Array,
+            value: [0, 0, 500, 500]
+          },
+          viewrectangle: {
+            type: Array,
+            value: [0, 0, 200, 150]
           },
           thumbscale: {
             type: Number,
@@ -75,10 +96,10 @@
       ready() {
         super.ready()
         this.log('ready')
-        this.graph = null
+        // this.graph = null
         this.listener = null
-        this.thumbrectangle = [0, 0, 500, 500];
-        this.viewrectangle = [0, 0, 200, 150];
+        // this.thumbrectangle = [0, 0, 500, 500];
+        // this.viewrectangle = [0, 0, 200, 150];
         this.log('done ready')
       }
 

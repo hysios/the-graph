@@ -35,6 +35,10 @@
     <div id="viewrect"></div>
   </template>
   <script>
+    var unwrap = function (n) {
+      return n;
+    }
+
     class TheGraphNav extends Polymer.GestureEventListeners(Polymer.Element) {
       static get is() {
         return 'the-graph-nav'
@@ -58,6 +62,11 @@
             type: Number,
             value: 1
           },
+          // was missing
+          thumbrectangle: {
+            type: Object,
+            value: {}
+          },
           backgroundColor: {
             type: String,
             value: "hsla(184, 8%, 75%, 0.9)"
@@ -67,6 +76,16 @@
             value: "hsla(0, 0%, 0%, 0.4)"
           }
         }
+      }
+
+      static get observers() {
+        return [
+          '_editorScaleChanged(editor.scale)',
+          '_editorWidthChanged(editor.width)',
+          '_editorHeightChanged(editor.height)',
+          '_editorPanChanged(editor.pan)',
+          '_editorThemeChanged(editor.theme)'
+        ]
       }
 
       // static get observers() {
@@ -167,11 +186,10 @@
         });
       }
 
-      editorChanged(editor, newEditor) {
+      // _editorChanged(editor, newEditor) {
+      // }
 
-      }
-
-      editorPanChanged() {
+      _editorPanChanged() {
         if (!this.editor.pan) {
           return;
         }
@@ -181,16 +199,16 @@
         this.viewrectangle[0] = -x;
         this.viewrectangle[1] = -y;
       }
-      editorWidthChanged() {
+      _editorWidthChanged() {
         this.viewrectangle[2] = parseInt(this.editor.width, 10);
       }
-      editorHeightChanged() {
+      _editorHeightChanged() {
         this.viewrectangle[3] = parseInt(this.editor.height, 10);
       }
-      editorScaleChanged() {
+      _editorScaleChanged() {
         this.scale = this.editor.scale;
       }
-      editorThemeChanged() {
+      _editorThemeChanged() {
         var style = TheGraph.nav.calculateStyleFromTheme(this.theme);
         this.backgroundColor = style.backgroundColor;
         this.viewBoxBorder = style.viewBoxBorder;
@@ -200,7 +218,9 @@
         // Redraw rectangle
         this.viewrectangleChanged();
       }
+
       viewrectangleChanged() {
+        console.log('viewrectangleChanged')
         // Canvas to grey out outside view
         var context = this.$.outcanvas.getContext('2d');
         context = unwrap(context);
@@ -216,6 +236,8 @@
           viewBoxBorder2: this.viewBoxBorder2,
           outsideFill: this.outsideFill,
         };
+        console.log('render nav', context, this.$.viewrect, properties)
+        // debugger
         var nav = TheGraph.nav.render(context, this.$.viewrect, properties);
         this.hide = nav.hide;
         // this.scaledviewrectangle = [x, y, w, h];
@@ -231,6 +253,7 @@
         this.viewrectangleChanged();
       }
       thumbrectangleChanged() {
+        console.log('thumbrectangleChanged')
         // Binding this from the-graph-thumb to know the dimensions rendered
         var w = this.thumbrectangle[2];
         var h = this.thumbrectangle[3];
