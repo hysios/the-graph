@@ -9800,16 +9800,15 @@ module.exports = {
 };
 
 },{}],18:[function(require,module,exports){
-
 function calculateStyleFromTheme(theme) {
   var style = {};
   if (theme === "dark") {
-    style.viewBoxBorder =  "hsla(190, 100%, 80%, 0.4)";
+    style.viewBoxBorder = "hsla(190, 100%, 80%, 0.4)";
     style.viewBoxBorder2 = "hsla( 10,  60%, 32%, 0.3)";
     style.outsideFill = "hsla(0, 0%, 0%, 0.4)";
     style.backgroundColor = "hsla(0, 0%, 0%, 0.9)";
   } else {
-    style.viewBoxBorder =  "hsla(190, 100%, 20%, 0.8)";
+    style.viewBoxBorder = "hsla(190, 100%, 20%, 0.8)";
     style.viewBoxBorder2 = "hsla( 10,  60%, 80%, 0.8)";
     style.outsideFill = "hsla(0, 0%, 100%, 0.4)";
     style.backgroundColor = "hsla(0, 0%, 100%, 0.9)";
@@ -9817,19 +9816,29 @@ function calculateStyleFromTheme(theme) {
   return style;
 }
 
-function renderViewRectangle(context, viewrect, props) {
+function scaledPos(props, index) {
+  console.log('scaledPos', props)
+  return (props.viewrectangle[index] / props.scale - props.thumbrectangle[index]) * props.thumbscale
+}
 
+function scaledSize(props, index) {
+  console.log('scaledSize', props)
+  return props.viewrectangle[index] * props.thumbscale / props.scale
+}
+
+function renderViewRectangle(context, viewrect, props) {
+  console.log('renderViewRectangle', context, viewrect, props)
   context.clearRect(0, 0, props.width, props.height);
   context.fillStyle = props.outsideFill;
 
   // Scaled view rectangle
-  var x = Math.round( (props.viewrectangle[0]/props.scale - props.thumbrectangle[0]) * props.thumbscale );
-  var y = Math.round( (props.viewrectangle[1]/props.scale - props.thumbrectangle[1]) * props.thumbscale );
-  var w = Math.round( props.viewrectangle[2] * props.thumbscale / props.scale );
-  var h = Math.round( props.viewrectangle[3] * props.thumbscale / props.scale );
+  var x = Math.round(scaledPos(props, 0));
+  var y = Math.round(scaledPos(props, 1));
+  var w = Math.round(scaledSize(props, 2));
+  var h = Math.round(scaledSize(props, 3));
 
   var hide = false;
-  if (x<0 && y<0 && w>props.width-x && h>props.height-y) {
+  if (x < 0 && y < 0 && w > props.width - x && h > props.height - y) {
     // Hide map
     hide = true;
     return {
@@ -9842,8 +9851,8 @@ function renderViewRectangle(context, viewrect, props) {
 
   // Clip to bounds
   // Left
-  if (x < 0) { 
-    w += x; 
+  if (x < 0) {
+    w += x;
     x = 0;
     viewrect.style.borderLeftColor = props.viewBoxBorder2;
   } else {
@@ -9851,8 +9860,8 @@ function renderViewRectangle(context, viewrect, props) {
     context.fillRect(0, 0, x, props.height);
   }
   // Top
-  if (y < 0) { 
-    h += y; 
+  if (y < 0) {
+    h += y;
     y = 0;
     viewrect.style.borderTopColor = props.viewBoxBorder2;
   } else {
@@ -9860,27 +9869,27 @@ function renderViewRectangle(context, viewrect, props) {
     context.fillRect(x, 0, w, y);
   }
   // Right
-  if (w > props.width-x) { 
-    w = props.width-x;
+  if (w > props.width - x) {
+    w = props.width - x;
     viewrect.style.borderRightColor = props.viewBoxBorder2;
   } else {
     viewrect.style.borderRightColor = props.viewBoxBorder;
-    context.fillRect(x+w, 0, props.width-(x+w), props.height);
+    context.fillRect(x + w, 0, props.width - (x + w), props.height);
   }
   // Bottom
-  if (h > props.height-y) { 
-    h = props.height-y;
+  if (h > props.height - y) {
+    h = props.height - y;
     viewrect.style.borderBottomColor = props.viewBoxBorder2;
   } else {
     viewrect.style.borderBottomColor = props.viewBoxBorder;
-    context.fillRect(x, y+h, w, props.height-(y+h));
+    context.fillRect(x, y + h, w, props.height - (y + h));
   }
 
   // Size and translate rect
-  viewrect.style.left = x+"px";
-  viewrect.style.top = y+"px";
-  viewrect.style.width = w+"px";
-  viewrect.style.height = h+"px";
+  viewrect.style.left = x + "px";
+  viewrect.style.top = y + "px";
+  viewrect.style.width = w + "px";
+  viewrect.style.height = h + "px";
 
   return {
     hide: hide
@@ -9892,7 +9901,6 @@ module.exports = {
   render: renderViewRectangle,
   calculateStyleFromTheme: calculateStyleFromTheme,
 };
-
 },{}],19:[function(require,module,exports){
 
 function drawEdge(context, scale, source, target, route, properties) {
@@ -11123,12 +11131,14 @@ module.exports.register = function (context) {
       this.pinching = false;
     },
     onTrackStart: function (event) {
+      console.log('App: onTrackStart', event)
       event.preventTap();
       var domNode = ReactDOM.findDOMNode(this);
       domNode.addEventListener("track", this.onTrack);
       domNode.addEventListener("trackend", this.onTrackEnd);
     },
     onTrack: function (event) {
+      console.log('App: onTrack', event)
       if (this.pinching) {
         return;
       }
@@ -11138,6 +11148,7 @@ module.exports.register = function (context) {
       });
     },
     onTrackEnd: function (event) {
+      console.log('App: onTrackEnd', event)
       // Don't click app (unselect)
       event.stopPropagation();
 
@@ -11239,25 +11250,29 @@ module.exports.register = function (context) {
       this.hideContext();
     },
     componentDidMount: function () {
-      console.log('App: componentDidMount')
       var domNode = ReactDOM.findDOMNode(this);
+      console.log('App: componentDidMount', domNode)
 
       // Set up PolymerGestures for app and all children
       var noop = function () {};
 
-      // deprecate: PolymerGestures
-      /*
-      PolymerGestures.addEventListener(domNode, "up", noop);
-      PolymerGestures.addEventListener(domNode, "down", noop);
-      PolymerGestures.addEventListener(domNode, "tap", noop);
-      PolymerGestures.addEventListener(domNode, "trackstart", noop);
-      PolymerGestures.addEventListener(domNode, "track", noop);
-      PolymerGestures.addEventListener(domNode, "trackend", noop);
-      PolymerGestures.addEventListener(domNode, "hold", noop);
-      */
+      let PolymerGestures = window.Polymer.Gestures
+      console.log('add Event/Gesture listeners', PolymerGestures)
+
+      // See: https://www.polymer-project.org/2.0/docs/devguide/gesture-events
+      //    Polymer.Gestures.addListener(this, 'tap', e => this.tapHandler(e));
+      // You can use the Polymer.Gestures.addListener function to add a listener to the host element.
+      PolymerGestures.addListener(domNode, "up", noop);
+      PolymerGestures.addListener(domNode, "down", noop);
+      PolymerGestures.addListener(domNode, "tap", noop);
+      PolymerGestures.addListener(domNode, "trackstart", noop);
+      PolymerGestures.addListener(domNode, "track", noop);
+      PolymerGestures.addListener(domNode, "trackend", noop);
+      PolymerGestures.addListener(domNode, "hold", noop);
 
       // Unselect edges and nodes
       if (this.props.onNodeSelection) {
+        // https://developer.mozilla.org/en-US/docs/Web/API/EventTarget/addEventListener
         domNode.addEventListener("tap", this.unselectAll);
       }
 
@@ -12094,10 +12109,10 @@ module.exports.register = function (context) {
 
   // Graph view
 
-  TheGraph.Graph = React.createFactory( React.createClass({
+  TheGraph.Graph = React.createFactory(React.createClass({
     displayName: "TheGraphGraph",
     mixins: [],
-    getInitialState: function() {
+    getInitialState: function () {
       return {
         graph: this.props.graph,
         displaySelectionGroup: true,
@@ -12151,12 +12166,18 @@ module.exports.register = function (context) {
 
       var edge;
       if (event.detail.isIn) {
-        edge = { to: port };
+        edge = {
+          to: port
+        };
       } else {
-        edge = { from: port };
+        edge = {
+          from: port
+        };
       }
       edge.isIn = event.detail.isIn;
-      edge.metadata = { route: event.detail.route };
+      edge.metadata = {
+        route: event.detail.route
+      };
       edge.type = event.detail.port.type;
 
       var appDomNode = ReactDOM.findDOMNode(this.props.app);
@@ -12165,7 +12186,9 @@ module.exports.register = function (context) {
       // TODO tap to add new node here
       appDomNode.addEventListener("tap", this.cancelPreviewEdge);
 
-      this.setState({edgePreview: edge});
+      this.setState({
+        edgePreview: edge
+      });
     },
     cancelPreviewEdge: function (event) {
       var appDomNode = ReactDOM.findDOMNode(this.props.app);
@@ -12173,7 +12196,9 @@ module.exports.register = function (context) {
       appDomNode.removeEventListener("track", this.renderPreviewEdge);
       appDomNode.removeEventListener("tap", this.cancelPreviewEdge);
       if (this.state.edgePreview) {
-        this.setState({edgePreview: null});
+        this.setState({
+          edgePreview: null
+        });
         this.markDirty();
       }
     },
@@ -12197,9 +12222,11 @@ module.exports.register = function (context) {
 
       // Move each group member
       var len = nodes.length;
-      for (var i=0; i<len; i++) {
+      for (var i = 0; i < len; i++) {
         var node = graph.getNode(nodes[i]);
-        if (!node) { continue; }
+        if (!node) {
+          continue;
+        }
         if (dx !== undefined) {
           // Move by delta
           graph.setNodeMetadata(node.id, {
@@ -12210,8 +12237,8 @@ module.exports.register = function (context) {
           // Snap to grid
           var snap = TheGraph.config.nodeHeight / 2;
           graph.setNodeMetadata(node.id, {
-            x: Math.round(node.metadata.x/snap) * snap,
-            y: Math.round(node.metadata.y/snap) * snap
+            x: Math.round(node.metadata.x / snap) * snap,
+            y: Math.round(node.metadata.y / snap) * snap
           });
         }
       }
@@ -12236,26 +12263,30 @@ module.exports.register = function (context) {
               outports: outports
             };
           }
-          
+
           var i, port, len;
-          for (i=0, len=component.outports.length; i<len; i++) {
+          for (i = 0, len = component.outports.length; i < len; i++) {
             port = component.outports[i];
-            if (!port.name) { continue; }
+            if (!port.name) {
+              continue;
+            }
             outports[port.name] = {
               label: port.name,
               type: port.type,
               x: node.metadata.width,
-              y: node.metadata.height / (len+1) * (i+1)
+              y: node.metadata.height / (len + 1) * (i + 1)
             };
           }
-          for (i=0, len=component.inports.length; i<len; i++) {
+          for (i = 0, len = component.inports.length; i < len; i++) {
             port = component.inports[i];
-            if (!port.name) { continue; }
+            if (!port.name) {
+              continue;
+            }
             inports[port.name] = {
               label: port.name,
               type: port.type,
               x: 0,
-              y: node.metadata.height / (len+1) * (i+1)
+              y: node.metadata.height / (len + 1) * (i + 1)
             };
           }
         }
@@ -12269,7 +12300,7 @@ module.exports.register = function (context) {
     },
     getNodeOutport: function (graph, processName, portName, route, componentName) {
       var ports = this.getPorts(graph, processName, componentName);
-      if ( !ports.outports[portName] ) {
+      if (!ports.outports[portName]) {
         ports.outports[portName] = {
           label: portName,
           x: TheGraph.config.nodeWidth,
@@ -12286,7 +12317,7 @@ module.exports.register = function (context) {
     },
     getNodeInport: function (graph, processName, portName, route, componentName) {
       var ports = this.getPorts(graph, processName, componentName);
-      if ( !ports.inports[portName] ) {
+      if (!ports.inports[portName]) {
         ports.inports[portName] = {
           label: portName,
           x: 0,
@@ -12328,7 +12359,10 @@ module.exports.register = function (context) {
     getGraphOutport: function (key) {
       var exp = this.graphOutports[key];
       if (!exp) {
-        exp = {inports:{},outports:{}};
+        exp = {
+          inports: {},
+          outports: {}
+        };
         exp.inports[key] = {
           label: key,
           type: "all",
@@ -12344,7 +12378,10 @@ module.exports.register = function (context) {
     getGraphInport: function (key) {
       var exp = this.graphInports[key];
       if (!exp) {
-        exp = {inports:{},outports:{}};
+        exp = {
+          inports: {},
+          outports: {}
+        };
         exp.outports[key] = {
           label: key,
           type: "all",
@@ -12388,26 +12425,33 @@ module.exports.register = function (context) {
     dirty: false,
     libraryDirty: false,
     markDirty: function (event) {
+      console.log('markDirty', event)
       if (event && event.libraryDirty) {
         this.libraryDirty = true;
       }
       window.requestAnimationFrame(this.triggerRender);
     },
     triggerRender: function (time) {
+      console.log('triggerRender', time)
       if (!this.isMounted()) {
+        console.log('not mounted')
         return;
       }
       if (this.dirty) {
+        console.log('is dirty')
         return;
       }
       this.dirty = true;
+      console.log('forceUpdate', this.dirty)
       this.forceUpdate();
     },
     shouldComponentUpdate: function () {
+      // console.log('shouldComponentUpdate', this.dirty)
       // If ports change or nodes move, then edges need to rerender, so we do the whole graph
       return this.dirty;
     },
-    render: function() {
+    render: function () {
+      console.log('Graph render');
       this.dirty = false;
 
       var self = this;
@@ -12437,14 +12481,14 @@ module.exports.register = function (context) {
         if (!node.metadata) {
           node.metadata = {};
         }
-        if (node.metadata.x === undefined) { 
-          node.metadata.x = 0; 
+        if (node.metadata.x === undefined) {
+          node.metadata.x = 0;
         }
-        if (node.metadata.y === undefined) { 
-          node.metadata.y = 0; 
+        if (node.metadata.y === undefined) {
+          node.metadata.y = 0;
         }
-        if (node.metadata.width === undefined) { 
-          node.metadata.width = TheGraph.config.nodeWidth; 
+        if (node.metadata.width === undefined) {
+          node.metadata.width = TheGraph.config.nodeWidth;
         }
         node.metadata.height = TheGraph.config.nodeHeight;
         if (TheGraph.config.autoSizeNode && componentInfo) {
@@ -12518,15 +12562,15 @@ module.exports.register = function (context) {
 
         var label = source.metadata.label + '() ' +
           edge.from.port.toUpperCase() +
-          (edge.from.hasOwnProperty('index') ? '['+edge.from.index+']' : '') + ' -> ' +
+          (edge.from.hasOwnProperty('index') ? '[' + edge.from.index + ']' : '') + ' -> ' +
           edge.to.port.toUpperCase() +
-          (edge.to.hasOwnProperty('index') ? '['+edge.to.index+']' : '') + ' ' +
+          (edge.to.hasOwnProperty('index') ? '[' + edge.to.index + ']' : '') + ' ' +
           target.metadata.label + '()';
         var key = edge.from.node + '() ' +
           edge.from.port.toUpperCase() +
-          (edge.from.hasOwnProperty('index') ? '['+edge.from.index+']' : '') + ' -> ' +
+          (edge.from.hasOwnProperty('index') ? '[' + edge.from.index + ']' : '') + ' -> ' +
           edge.to.port.toUpperCase() +
-          (edge.to.hasOwnProperty('index') ? '['+edge.to.index+']' : '') + ' ' +
+          (edge.to.hasOwnProperty('index') ? '[' + edge.to.index + ']' : '') + ' ' +
           edge.to.node + '()';
 
         var edgeOptions = {
@@ -12554,8 +12598,10 @@ module.exports.register = function (context) {
       // IIPs
       var iips = graph.initializers.map(function (iip) {
         var target = graph.getNode(iip.to.node);
-        if (!target) { return; }
-        
+        if (!target) {
+          return;
+        }
+
         var targetPort = self.getNodeInport(graph, iip.to.node, iip.to.port, 0, target.component);
         var tX = target.metadata.x;
         var tY = target.metadata.y + targetPort.y;
@@ -12584,34 +12630,45 @@ module.exports.register = function (context) {
         var label = key;
         var nodeKey = inport.process;
         var portKey = inport.port;
-        if (!inport.metadata) { 
-          inport.metadata = {x:0, y:0}; 
+        if (!inport.metadata) {
+          inport.metadata = {
+            x: 0,
+            y: 0
+          };
         }
         var metadata = inport.metadata;
-        if (!metadata.x) { metadata.x = 0; }
-        if (!metadata.y) { metadata.y = 0; }
-        if (!metadata.width) { metadata.width = TheGraph.config.nodeWidth; }
-        if (!metadata.height) { metadata.height = TheGraph.config.nodeHeight; }
+        if (!metadata.x) {
+          metadata.x = 0;
+        }
+        if (!metadata.y) {
+          metadata.y = 0;
+        }
+        if (!metadata.width) {
+          metadata.width = TheGraph.config.nodeWidth;
+        }
+        if (!metadata.height) {
+          metadata.height = TheGraph.config.nodeHeight;
+        }
         // Private port info
         var portInfo = self.portInfo[nodeKey];
         if (!portInfo) {
-          console.warn("Node "+nodeKey+" not found for graph inport "+label);
+          console.warn("Node " + nodeKey + " not found for graph inport " + label);
           return;
         }
         var privatePort = portInfo.inports[portKey];
         if (!privatePort) {
-          console.warn("Port "+nodeKey+"."+portKey+" not found for graph inport "+label);
+          console.warn("Port " + nodeKey + "." + portKey + " not found for graph inport " + label);
           return;
         }
         // Private node
         var privateNode = graph.getNode(nodeKey);
         if (!privateNode) {
-          console.warn("Node "+nodeKey+" not found for graph inport "+label);
+          console.warn("Node " + nodeKey + " not found for graph inport " + label);
           return;
         }
         // Node view
         var expNode = {
-          key: "inport.node."+key,
+          key: "inport.node." + key,
           export: inport,
           exportKey: key,
           x: metadata.x,
@@ -12631,7 +12688,7 @@ module.exports.register = function (context) {
         expNode = TheGraph.merge(TheGraph.config.graph.inportNode, expNode);
         // Edge view
         var expEdge = {
-          key: "inport.edge."+key,
+          key: "inport.edge." + key,
           export: inport,
           exportKey: key,
           graph: graph,
@@ -12659,34 +12716,45 @@ module.exports.register = function (context) {
         var label = key;
         var nodeKey = outport.process;
         var portKey = outport.port;
-        if (!outport.metadata) { 
-          outport.metadata = {x:0, y:0}; 
+        if (!outport.metadata) {
+          outport.metadata = {
+            x: 0,
+            y: 0
+          };
         }
         var metadata = outport.metadata;
-        if (!metadata.x) { metadata.x = 0; }
-        if (!metadata.y) { metadata.y = 0; }
-        if (!metadata.width) { metadata.width = TheGraph.config.nodeWidth; }
-        if (!metadata.height) { metadata.height = TheGraph.config.nodeHeight; }
+        if (!metadata.x) {
+          metadata.x = 0;
+        }
+        if (!metadata.y) {
+          metadata.y = 0;
+        }
+        if (!metadata.width) {
+          metadata.width = TheGraph.config.nodeWidth;
+        }
+        if (!metadata.height) {
+          metadata.height = TheGraph.config.nodeHeight;
+        }
         // Private port info
         var portInfo = self.portInfo[nodeKey];
         if (!portInfo) {
-          console.warn("Node "+nodeKey+" not found for graph outport "+label);
+          console.warn("Node " + nodeKey + " not found for graph outport " + label);
           return;
         }
         var privatePort = portInfo.outports[portKey];
         if (!privatePort) {
-          console.warn("Port "+nodeKey+"."+portKey+" not found for graph outport "+label);
+          console.warn("Port " + nodeKey + "." + portKey + " not found for graph outport " + label);
           return;
         }
         // Private node
         var privateNode = graph.getNode(nodeKey);
         if (!privateNode) {
-          console.warn("Node "+nodeKey+" not found for graph outport "+label);
+          console.warn("Node " + nodeKey + " not found for graph outport " + label);
           return;
         }
         // Node view
         var expNode = {
-          key: "outport.node."+key,
+          key: "outport.node." + key,
           export: outport,
           exportKey: key,
           x: metadata.x,
@@ -12706,7 +12774,7 @@ module.exports.register = function (context) {
         expNode = TheGraph.merge(TheGraph.config.graph.outportNode, expNode);
         // Edge view
         var expEdge = {
-          key: "outport.edge."+key,
+          key: "outport.edge." + key,
           export: outport,
           exportKey: key,
           graph: graph,
@@ -12737,7 +12805,7 @@ module.exports.register = function (context) {
           return;
         }
         var groupOptions = {
-          key: "group."+group.name,
+          key: "group." + group.name,
           graph: graph,
           item: group,
           app: self.props.app,
@@ -12759,13 +12827,15 @@ module.exports.register = function (context) {
 
       // Selection pseudo-group
       if (this.state.displaySelectionGroup &&
-          selectedIds.length >= 2) {
+        selectedIds.length >= 2) {
         var limits = TheGraph.findMinMax(graph, selectedIds);
         if (limits) {
           var pseudoGroup = {
             name: "selection",
             nodes: selectedIds,
-            metadata: {color:1}
+            metadata: {
+              color: 1
+            }
           };
           var selectionGroupOptions = {
             graph: graph,
@@ -12817,22 +12887,34 @@ module.exports.register = function (context) {
         edges.push(edgePreviewView);
       }
 
-      var groupsOptions = TheGraph.merge(TheGraph.config.graph.groupsGroup, { children: groups });
+      var groupsOptions = TheGraph.merge(TheGraph.config.graph.groupsGroup, {
+        children: groups
+      });
       var groupsGroup = TheGraph.factories.graph.createGraphGroupsGroup.call(this, groupsOptions);
 
-      var edgesOptions = TheGraph.merge(TheGraph.config.graph.edgesGroup, { children: edges });
+      var edgesOptions = TheGraph.merge(TheGraph.config.graph.edgesGroup, {
+        children: edges
+      });
       var edgesGroup = TheGraph.factories.graph.createGraphEdgesGroup.call(this, edgesOptions);
 
-      var iipsOptions = TheGraph.merge(TheGraph.config.graph.iipsGroup, { children: iips });
+      var iipsOptions = TheGraph.merge(TheGraph.config.graph.iipsGroup, {
+        children: iips
+      });
       var iipsGroup = TheGraph.factories.graph.createGraphIIPGroup.call(this, iipsOptions);
 
-      var nodesOptions = TheGraph.merge(TheGraph.config.graph.nodesGroup, { children: nodes });
+      var nodesOptions = TheGraph.merge(TheGraph.config.graph.nodesGroup, {
+        children: nodes
+      });
       var nodesGroup = TheGraph.factories.graph.createGraphNodesGroup.call(this, nodesOptions);
 
-      var inportsOptions = TheGraph.merge(TheGraph.config.graph.inportsGroup, { children: inports });
+      var inportsOptions = TheGraph.merge(TheGraph.config.graph.inportsGroup, {
+        children: inports
+      });
       var inportsGroup = TheGraph.factories.graph.createGraphInportsGroup.call(this, inportsOptions);
 
-      var outportsOptions = TheGraph.merge(TheGraph.config.graph.outportsGroup, { children: outports });
+      var outportsOptions = TheGraph.merge(TheGraph.config.graph.outportsGroup, {
+        children: outports
+      });
       var outportsGroup = TheGraph.factories.graph.createGraphGroupsGroup.call(this, outportsOptions);
 
       var containerContents = [
@@ -12845,16 +12927,17 @@ module.exports.register = function (context) {
       ];
 
       var selectedClass = (this.state.forceSelection ||
-                           selectedIds.length>0) ? ' selection' : '';
+        selectedIds.length > 0) ? ' selection' : '';
 
-      var containerOptions = TheGraph.merge(TheGraph.config.graph.container, { className: 'graph' + selectedClass });
+      var containerOptions = TheGraph.merge(TheGraph.config.graph.container, {
+        className: 'graph' + selectedClass
+      });
       return TheGraph.factories.graph.createGraphContainerGroup.call(this, containerOptions, containerContents);
 
     }
-  }));  
+  }));
 
 };
-
 },{}],26:[function(require,module,exports){
 module.exports.register = function (context) {
 
@@ -13978,12 +14061,12 @@ module.exports.register = function (context) {
     ],
     componentDidMount: function () {
       console.log('TheGraph.Node: componentDidMount', this.props)
-      patchGestures();
+      // patchGestures();
       var domNode = ReactDOM.findDOMNode(this);
 
       // Dragging
-      console.log('add Eventlisteners', "trackstart", "tap", "contextmenu", "hold")
-      domNode.addEventListener("trackstart", this.onTrackStart);
+      console.log('add Eventlisteners', "track", "tap", "contextmenu", "hold")
+      domNode.addEventListener("track", this.trackHandler);
 
       // Tap to select
       if (this.props.onNodeSelection) {
@@ -13994,8 +14077,8 @@ module.exports.register = function (context) {
 
       // Context menu
       if (this.props.showContext) {
-        ReactDOM.findDOMNode(this).addEventListener("contextmenu", this.showContext);
-        ReactDOM.findDOMNode(this).addEventListener("hold", this.showContext);
+        domNode.addEventListener("contextmenu", this.showContext);
+        domNode.addEventListener("hold", this.showContext);
       } else {
         console.log('no showContext')
       }
@@ -14008,13 +14091,19 @@ module.exports.register = function (context) {
       var toggle = (TheGraph.metaKeyPressed || event.pointerType === "touch");
       this.props.onNodeSelection(this.props.nodeID, this.props.node, toggle);
     },
-    onTrackStart: function (event) {
+
+    _onTrackStart: function (event) {
+      // state — a string indicating the tracking state:
+      //  start — fired when tracking is first detected (finger/button down and moved past a pre-set distance threshold)
+      //  track — fired while tracking
+      //  end — fired when tracking ends
+
       console.log('Node: onTrackStart', event)
       // Don't drag graph
       event.stopPropagation();
 
       // Don't change selection
-      event.preventTap();
+      // event.preventTap();
 
       // Don't drag under menu
       if (this.props.app.menuShown) {
@@ -14026,10 +14115,6 @@ module.exports.register = function (context) {
         return;
       }
 
-      var domNode = ReactDOM.findDOMNode(this);
-      domNode.addEventListener("track", this.onTrack);
-      domNode.addEventListener("trackend", this.onTrackEnd);
-
       // Moving a node should only be a single transaction
       if (this.props.export) {
         this.props.graph.startTransaction('moveexport');
@@ -14037,41 +14122,68 @@ module.exports.register = function (context) {
         this.props.graph.startTransaction('movenode');
       }
     },
-    onTrack: function (event) {
-      console.log('Node: onTrack', event)
+    trackHandler: function (event) {
       // Don't fire on graph
       event.stopPropagation();
+      console.log('track state', event.detail.state);
+      switch (event.detail.state) {
+        case 'start':
+          this._onTrackStart(event);
+          break;
+        case 'track':
+          this._onTrack(event);
+          break;
+        case 'end':
+          this._onTrackEnd(event);
+          break;
+      }
+    },
 
+    _onTrack: function (event) {
       var scale = this.props.app.state.scale;
-      var deltaX = Math.round(event.ddx / scale);
-      var deltaY = Math.round(event.ddy / scale);
+      var detail = event.detail
+      var deltaX = Math.round(detail.ddx / scale);
+      var deltaY = Math.round(detail.ddy / scale);
+      console.log('onTrack', {
+        detail,
+        deltaX,
+        deltaY
+      });
 
+      console.log('Node export:', this.props.export);
+      var meta = this.props.node.metadata
+      var x = meta.x
+      var y = meta.y
       // Fires a change event on fbp-graph graph, which triggers redraw
+      var newPos = {
+        x: x + deltaX,
+        y: y + deltaY,
+      }
+
       if (this.props.export) {
-        var newPos = {
-          x: this.props.export.metadata.x + deltaX,
-          y: this.props.export.metadata.y + deltaY
-        };
+        console.log('Node export redraw');
         if (this.props.isIn) {
           this.props.graph.setInportMetadata(this.props.exportKey, newPos);
         } else {
           this.props.graph.setOutportMetadata(this.props.exportKey, newPos);
         }
       } else {
-        this.props.graph.setNodeMetadata(this.props.nodeID, {
-          x: this.props.node.metadata.x + deltaX,
-          y: this.props.node.metadata.y + deltaY
+        console.log('Node redraw', {
+          old: {
+            x,
+            y,
+          },
+          newPos,
         });
+        this.props.graph.setNodeMetadata(this.props.nodeID, newPos);
       }
     },
-    onTrackEnd: function (event) {
+    _onTrackEnd: function (event) {
       console.log('Node: onTrackEnd', event)
       // Don't fire on graph
       event.stopPropagation();
 
       var domNode = ReactDOM.findDOMNode(this);
-      domNode.removeEventListener("track", this.onTrack);
-      domNode.removeEventListener("trackend", this.onTrackEnd);
 
       // Snap to grid
       var snapToGrid = true;

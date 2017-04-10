@@ -106,12 +106,12 @@ module.exports.register = function (context) {
     ],
     componentDidMount: function () {
       console.log('TheGraph.Node: componentDidMount', this.props)
-      patchGestures();
+      // patchGestures();
       var domNode = ReactDOM.findDOMNode(this);
 
       // Dragging
-      console.log('add Eventlisteners', "trackstart", "tap", "contextmenu", "hold")
-      domNode.addEventListener("trackstart", this.onTrackStart);
+      console.log('add Eventlisteners', "track", "tap", "contextmenu", "hold")
+      domNode.addEventListener("track", this.trackHandler);
 
       // Tap to select
       if (this.props.onNodeSelection) {
@@ -122,8 +122,8 @@ module.exports.register = function (context) {
 
       // Context menu
       if (this.props.showContext) {
-        ReactDOM.findDOMNode(this).addEventListener("contextmenu", this.showContext);
-        ReactDOM.findDOMNode(this).addEventListener("hold", this.showContext);
+        domNode.addEventListener("contextmenu", this.showContext);
+        domNode.addEventListener("hold", this.showContext);
       } else {
         console.log('no showContext')
       }
@@ -136,13 +136,19 @@ module.exports.register = function (context) {
       var toggle = (TheGraph.metaKeyPressed || event.pointerType === "touch");
       this.props.onNodeSelection(this.props.nodeID, this.props.node, toggle);
     },
-    onTrackStart: function (event) {
+
+    _onTrackStart: function (event) {
+      // state — a string indicating the tracking state:
+      //  start — fired when tracking is first detected (finger/button down and moved past a pre-set distance threshold)
+      //  track — fired while tracking
+      //  end — fired when tracking ends
+
       console.log('Node: onTrackStart', event)
       // Don't drag graph
       event.stopPropagation();
 
       // Don't change selection
-      event.preventTap();
+      // event.preventTap();
 
       // Don't drag under menu
       if (this.props.app.menuShown) {
@@ -154,10 +160,6 @@ module.exports.register = function (context) {
         return;
       }
 
-      var domNode = ReactDOM.findDOMNode(this);
-      domNode.addEventListener("track", this.onTrack);
-      domNode.addEventListener("trackend", this.onTrackEnd);
-
       // Moving a node should only be a single transaction
       if (this.props.export) {
         this.props.graph.startTransaction('moveexport');
@@ -165,41 +167,68 @@ module.exports.register = function (context) {
         this.props.graph.startTransaction('movenode');
       }
     },
-    onTrack: function (event) {
-      console.log('Node: onTrack', event)
+    trackHandler: function (event) {
       // Don't fire on graph
       event.stopPropagation();
+      console.log('track state', event.detail.state);
+      switch (event.detail.state) {
+        case 'start':
+          this._onTrackStart(event);
+          break;
+        case 'track':
+          this._onTrack(event);
+          break;
+        case 'end':
+          this._onTrackEnd(event);
+          break;
+      }
+    },
 
+    _onTrack: function (event) {
       var scale = this.props.app.state.scale;
-      var deltaX = Math.round(event.ddx / scale);
-      var deltaY = Math.round(event.ddy / scale);
+      var detail = event.detail
+      var deltaX = Math.round(detail.ddx / scale);
+      var deltaY = Math.round(detail.ddy / scale);
+      console.log('onTrack', {
+        detail,
+        deltaX,
+        deltaY
+      });
 
+      console.log('Node export:', this.props.export);
+      var meta = this.props.node.metadata
+      var x = meta.x
+      var y = meta.y
       // Fires a change event on fbp-graph graph, which triggers redraw
+      var newPos = {
+        x: x + deltaX,
+        y: y + deltaY,
+      }
+
       if (this.props.export) {
-        var newPos = {
-          x: this.props.export.metadata.x + deltaX,
-          y: this.props.export.metadata.y + deltaY
-        };
+        console.log('Node export redraw');
         if (this.props.isIn) {
           this.props.graph.setInportMetadata(this.props.exportKey, newPos);
         } else {
           this.props.graph.setOutportMetadata(this.props.exportKey, newPos);
         }
       } else {
-        this.props.graph.setNodeMetadata(this.props.nodeID, {
-          x: this.props.node.metadata.x + deltaX,
-          y: this.props.node.metadata.y + deltaY
+        console.log('Node redraw', {
+          old: {
+            x,
+            y,
+          },
+          newPos,
         });
+        this.props.graph.setNodeMetadata(this.props.nodeID, newPos);
       }
     },
-    onTrackEnd: function (event) {
+    _onTrackEnd: function (event) {
       console.log('Node: onTrackEnd', event)
       // Don't fire on graph
       event.stopPropagation();
 
       var domNode = ReactDOM.findDOMNode(this);
-      domNode.removeEventListener("track", this.onTrack);
-      domNode.removeEventListener("trackend", this.onTrackEnd);
 
       // Snap to grid
       var snapToGrid = true;

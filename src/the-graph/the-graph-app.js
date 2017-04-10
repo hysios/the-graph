@@ -208,12 +208,14 @@ module.exports.register = function (context) {
       this.pinching = false;
     },
     onTrackStart: function (event) {
+      console.log('App: onTrackStart', event)
       event.preventTap();
       var domNode = ReactDOM.findDOMNode(this);
       domNode.addEventListener("track", this.onTrack);
       domNode.addEventListener("trackend", this.onTrackEnd);
     },
     onTrack: function (event) {
+      console.log('App: onTrack', event)
       if (this.pinching) {
         return;
       }
@@ -223,6 +225,7 @@ module.exports.register = function (context) {
       });
     },
     onTrackEnd: function (event) {
+      console.log('App: onTrackEnd', event)
       // Don't click app (unselect)
       event.stopPropagation();
 
@@ -324,25 +327,29 @@ module.exports.register = function (context) {
       this.hideContext();
     },
     componentDidMount: function () {
-      console.log('App: componentDidMount')
       var domNode = ReactDOM.findDOMNode(this);
+      console.log('App: componentDidMount', domNode)
 
       // Set up PolymerGestures for app and all children
       var noop = function () {};
 
-      // deprecate: PolymerGestures
-      /*
-      PolymerGestures.addEventListener(domNode, "up", noop);
-      PolymerGestures.addEventListener(domNode, "down", noop);
-      PolymerGestures.addEventListener(domNode, "tap", noop);
-      PolymerGestures.addEventListener(domNode, "trackstart", noop);
-      PolymerGestures.addEventListener(domNode, "track", noop);
-      PolymerGestures.addEventListener(domNode, "trackend", noop);
-      PolymerGestures.addEventListener(domNode, "hold", noop);
-      */
+      let PolymerGestures = window.Polymer.Gestures
+      console.log('add Event/Gesture listeners', PolymerGestures)
+
+      // See: https://www.polymer-project.org/2.0/docs/devguide/gesture-events
+      //    Polymer.Gestures.addListener(this, 'tap', e => this.tapHandler(e));
+      // You can use the Polymer.Gestures.addListener function to add a listener to the host element.
+      PolymerGestures.addListener(domNode, "up", noop);
+      PolymerGestures.addListener(domNode, "down", noop);
+      PolymerGestures.addListener(domNode, "tap", noop);
+      PolymerGestures.addListener(domNode, "trackstart", noop);
+      PolymerGestures.addListener(domNode, "track", noop);
+      PolymerGestures.addListener(domNode, "trackend", noop);
+      PolymerGestures.addListener(domNode, "hold", noop);
 
       // Unselect edges and nodes
       if (this.props.onNodeSelection) {
+        // https://developer.mozilla.org/en-US/docs/Web/API/EventTarget/addEventListener
         domNode.addEventListener("tap", this.unselectAll);
       }
 

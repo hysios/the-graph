@@ -3156,6 +3156,7 @@
           };
 
           Graph.prototype.setNodeMetadata = function (id, metadata) {
+            console.log('setNodeMetadata', id, metadata)
             var before, item, node, val;
             node = this.getNode(id);
             if (!node) {

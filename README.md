@@ -277,6 +277,114 @@ static get observers() {
 }
 ```
 
+### Drag and Drop etc.
+
+In the old days, there were distinct track events such as `trackstart`, `track` and `trackend` ie.
+
+`domNode.addEventListener("trackstart", this.onTrackStart);`
+
+The new `Polymer.Gestures` is more elegant, using a single `track` event with detail event information to act on:
+
+```js
+Polymer.Gestures.addListener(node, 'tap', e => this.tapHandler(e));
+Polymer.Gestures.addListener(node, 'track', e => this.trackHandler(e));
+
+tapHandler(e) {
+
+}
+trackHandler: function (event) {
+  // Don't fire on graph
+  event.stopPropagation();
+  console.log('track state', event.detail.state);
+  switch (event.detail.state) {
+    case 'start':
+      this._onTrackStart(event);
+      break;
+    case 'track':
+      this._onTrack(event);
+      break;
+    case 'end':
+      this._onTrackEnd(event);
+      break;
+  }
+},
+
+
+_onTrack: function (event) {
+  var scale = this.props.app.state.scale;
+  var detail = event.detail
+  var deltaX = Math.round(detail.ddx / scale);
+  var deltaY = Math.round(detail.ddy / scale);
+
+    var coords = {
+      x: this.props.node.metadata.x + deltaX,
+      y: this.props.node.metadata.y + deltaY
+    }
+
+    console.log('Node redraw', coords);
+    // TODO: Fix!?
+    this.props.graph.setNodeMetadata(this.props.nodeID, coords);
+```
+
+Problem now is why [fbp-graph](https://github.com/flowbased/fbp-graph) is not updating graph correctly when receiving new coordinates!?
+
+See [setNodeMetadata](https://github.com/flowbased/fbp-graph/blob/master/src/Graph.coffee#L434)
+
+`class Graph extends EventEmitter` uses `@emit` (from [events](https://www.npmjs.com/package/events) to emit events, ie. `@emit 'changeNode', node, before, metadata`. Somehow we need to listen and react to these events I believe...
+
+We can find this event listener in `the-graph-graph.js`
+
+```js
+componentDidMount: function () {
+  // To change port colors
+  this.props.graph.on("addEdge", this.resetPortRoute);
+  this.props.graph.on("changeEdge", this.resetPortRoute);
+  this.props.graph.on("removeEdge", this.resetPortRoute);
+  this.props.graph.on("removeInitial", this.resetPortRoute);
+
+  // Listen to fbp-graph graph object's events
+
+  // ==========================
+  // HERE!!!!
+  // ==========================
+  this.props.graph.on("changeNode", this.markDirty);
+
+  this.props.graph.on("changeInport", this.markDirty);
+  this.props.graph.on("changeOutport", this.markDirty);
+  this.props.graph.on("endTransaction", this.markDirty);
+},
+
+markDirty: function (event) {
+  if (event && event.libraryDirty) {
+    this.libraryDirty = true;
+  }
+  // Re-RENDER!!!
+  window.requestAnimationFrame(this.triggerRender);
+},
+
+triggerRender: function (time) {
+  if (!this.isMounted()) {
+    return;
+  }
+  if (this.dirty) {
+    return;
+  }
+  this.dirty = true;
+  console.log('forceUpdate', this.dirty)
+  this.forceUpdate();
+},
+shouldComponentUpdate: function () {
+  // If ports change or nodes move, then edges need to rerender, so we do the whole graph
+  return this.dirty;
+},
+```
+
+This doesn't seem to work!? Also [very bad to use forceUpdate in React](http://stackoverflow.com/questions/35617580/if-using-forceupdate-is-discouraged-how-should-components-react-to-change-eve)
+
+See [React: Re-rendering A Component](https://www.reactenlightenment.com/basic-react-components/6.10.html)
+
+Instead, `dirty` should be part of the props, ie. `dirty: false` in the `initialState` and set to true via `setState`.
+
 ## Getting started
 
 First read these articles!!
