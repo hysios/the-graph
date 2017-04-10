@@ -83,7 +83,7 @@ module.exports.register = function (context) {
   };
 
   TheGraph.findMinMax = function (graph, nodes) {
-    console.log('findMinMax', graph)
+    // console.log('findMinMax', graph)
     var inports, outports;
     if (nodes === undefined) {
       nodes = graph.nodes.map(function (node) {

@@ -30,14 +30,14 @@ module.exports.register = function (context) {
   };
 
   function createEdgePathArray(sourceX, sourceY, c1X, c1Y, c2X, c2Y, targetX, targetY) {
-      return [
-        "M",
-        sourceX, sourceY,
-        "C",
-        c1X, c1Y,
-        c2X, c2Y,
-        targetX, targetY
-      ];
+    return [
+      "M",
+      sourceX, sourceY,
+      "C",
+      c1X, c1Y,
+      c2X, c2Y,
+      targetX, targetY
+    ];
   }
 
   // Const
@@ -63,24 +63,23 @@ module.exports.register = function (context) {
     // Point on the curve between blue points
     var x = b1x * p + b2x * op;
     var y = b1y * p + b2y * op;
-    return [x, y];    
+    return [x, y];
   };
 
 
   // Edge view
 
-  TheGraph.Edge = React.createFactory( React.createClass({
+  TheGraph.Edge = React.createFactory(React.createClass({
     displayName: "TheGraphEdge",
     mixins: [
       TheGraph.mixins.Tooltip
     ],
-    componentWillMount: function() {
-    },
+    componentWillMount: function () {},
     componentDidMount: function () {
       var domNode = ReactDOM.findDOMNode(this);
 
       // Dragging
-      domNode.addEventListener("trackstart", this.dontPan);
+      domNode.addEventListener("track", this.trackHandler);
 
       if (this.props.onEdgeSelection) {
         // Needs to be click (not tap) to get event.shiftKey
@@ -93,9 +92,16 @@ module.exports.register = function (context) {
         domNode.addEventListener("hold", this.showContext);
       }
     },
+    trackHandler: function (event) {
+      switch (event.detail.state) {
+        case 'start':
+          this.dontPan(event);
+      }
+    },
+
     dontPan: function (event) {
       // Don't drag under menu
-      if (this.props.app.menuShown) { 
+      if (this.props.app.menuShown) {
         event.stopPropagation();
       }
     },
@@ -103,7 +109,7 @@ module.exports.register = function (context) {
       // Don't click app
       event.stopPropagation();
 
-      var toggle = (TheGraph.metaKeyPressed || event.pointerType==="touch");
+      var toggle = (TheGraph.metaKeyPressed || event.pointerType === "touch");
       this.props.onEdgeSelection(this.props.edgeID, this.props.edge, toggle);
     },
     showContext: function (event) {
@@ -112,7 +118,9 @@ module.exports.register = function (context) {
 
       // Don't tap graph on hold event
       event.stopPropagation();
-      if (event.preventTap) { event.preventTap(); }
+      if (event.preventTap) {
+        event.preventTap();
+      }
 
       // Get mouse position
       var x = event.x || event.clientX || 0;
@@ -140,11 +148,15 @@ module.exports.register = function (context) {
       });
     },
     shouldComponentUpdate: function (nextProps, nextState) {
+      console.log('Edge shouldComponentUpdate', {
+        nextProps,
+        props: this.props
+      })
       // Only rerender if changed
       return (
-        nextProps.sX !== this.props.sX || 
+        nextProps.sX !== this.props.sX ||
         nextProps.sY !== this.props.sY ||
-        nextProps.tX !== this.props.tX || 
+        nextProps.tX !== this.props.tX ||
         nextProps.tY !== this.props.tY ||
         nextProps.selected !== this.props.selected ||
         nextProps.animated !== this.props.animated ||
@@ -163,11 +175,18 @@ module.exports.register = function (context) {
       var targetX = this.props.tX;
       var targetY = this.props.tY;
 
+      console.log('Edge render', {
+        sourceX,
+        sourceY,
+        targetX,
+        targetY
+      });
+
       // Organic / curved edge
       var c1X, c1Y, c2X, c2Y;
-      if (targetX-5 < sourceX) {
+      if (targetX - 5 < sourceX) {
         var curveFactor = (sourceX - targetX) * CURVE / 200;
-        if (Math.abs(targetY-sourceY) < TheGraph.config.nodeSize/2) {
+        if (Math.abs(targetY - sourceY) < TheGraph.config.nodeSize / 2) {
           // Loopback
           c1X = sourceX + curveFactor;
           c1Y = sourceY - curveFactor;
@@ -182,7 +201,7 @@ module.exports.register = function (context) {
         }
       } else {
         // Controls halfway between
-        c1X = sourceX + (targetX - sourceX)/2;
+        c1X = sourceX + (targetX - sourceX) / 2;
         c1Y = sourceY;
         c2X = c1X;
         c2Y = targetY;
@@ -193,19 +212,26 @@ module.exports.register = function (context) {
       var path = TheGraph.factories.edge.createEdgePathArray(sourceX, sourceY, c1X, c1Y, c2X, c2Y, targetX, targetY);
       path = path.join(" ");
 
-      var backgroundPathOptions = TheGraph.merge(TheGraph.config.edge.backgroundPath, { d: path });
+      var backgroundPathOptions = TheGraph.merge(TheGraph.config.edge.backgroundPath, {
+        d: path
+      });
       var backgroundPath = TheGraph.factories.edge.createEdgeBackgroundPath(backgroundPathOptions);
 
       var foregroundPathClassName = TheGraph.config.edge.foregroundPath.className + this.props.route;
-      var foregroundPathOptions = TheGraph.merge(TheGraph.config.edge.foregroundPath, { d: path, className: foregroundPathClassName });
+      var foregroundPathOptions = TheGraph.merge(TheGraph.config.edge.foregroundPath, {
+        d: path,
+        className: foregroundPathClassName
+      });
       var foregroundPath = TheGraph.factories.edge.createEdgeForegroundPath(foregroundPathOptions);
 
-      var touchPathOptions = TheGraph.merge(TheGraph.config.edge.touchPath, { d: path });
+      var touchPathOptions = TheGraph.merge(TheGraph.config.edge.touchPath, {
+        d: path
+      });
       var touchPath = TheGraph.factories.edge.createEdgeTouchPath(touchPathOptions);
 
       var containerOptions = {
-        className: "edge"+
-          (this.props.selected ? " selected" : "")+
+        className: "edge" +
+          (this.props.selected ? " selected" : "") +
           (this.props.animated ? " animated" : ""),
         title: this.props.label
       };
@@ -227,10 +253,10 @@ module.exports.register = function (context) {
 
       // find point on line y = mx + b that is `offset` away from x,y
       var findLinePoint = function (x, y, m, b, offset, flip) {
-        var x1 = x + offset/Math.sqrt(1 + m*m);
+        var x1 = x + offset / Math.sqrt(1 + m * m);
         var y1;
         if (Math.abs(m) === Infinity) {
-          y1 = y + (flip || 1) *offset;
+          y1 = y + (flip || 1) * offset;
         } else {
           y1 = (m * x1) + b;
         }
@@ -242,14 +268,14 @@ module.exports.register = function (context) {
       if (plus[0] > minus[0]) {
         arrowLength *= -1;
       }
-      center = findLinePoint(center[0], center[1], m, b, -1*arrowLength/2);
+      center = findLinePoint(center[0], center[1], m, b, -1 * arrowLength / 2);
 
       // find points of perpendicular line length l centered at x,y
       var perpendicular = function (x, y, oldM, l) {
-        var m = -1/oldM;
-        var b = y - m*x;
-        var point1 = findLinePoint(x, y, m, b, l/2);
-        var point2 = findLinePoint(x, y, m, b, l/-2);
+        var m = -1 / oldM;
+        var b = y - m * x;
+        var point1 = findLinePoint(x, y, m, b, l / 2);
+        var point2 = findLinePoint(x, y, m, b, l / -2);
         return [point1, point2];
       };
 
@@ -260,7 +286,9 @@ module.exports.register = function (context) {
       points.push(arrowTip);
 
       var pointsArray = points.map(
-        function (point) {return point.join(',');}).join(' ');
+        function (point) {
+          return point.join(',');
+        }).join(' ');
       var arrowBg = TheGraph.factories.edge.createArrow({
         points: pointsArray,
         className: 'arrow-bg'
@@ -271,8 +299,7 @@ module.exports.register = function (context) {
         className: 'arrow fill route' + this.props.route
       });
 
-      return TheGraph.factories.edge.createEdgeGroup(containerOptions,
-         [backgroundPath, arrowBg, foregroundPath, touchPath, arrow]);
+      return TheGraph.factories.edge.createEdgeGroup(containerOptions, [backgroundPath, arrowBg, foregroundPath, touchPath, arrow]);
     }
   }));
 

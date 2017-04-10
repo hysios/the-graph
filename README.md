@@ -385,6 +385,26 @@ See [React: Re-rendering A Component](https://www.reactenlightenment.com/basic-r
 
 Instead, `dirty` should be part of the props, ie. `dirty: false` in the `initialState` and set to true via `setState`.
 
+### Edges
+
+All we need is for the preview edges to be drawn correctly!
+In `TheGraph` we have a method to render the preview of an edge. Somehow the `targetY` value
+is not calculated correctly!
+
+```js
+  renderPreviewEdge: function (event) {
+    console.log('renderPreviewEdge', event)
+```
+
+- OLD: `{edgePreviewX: 348, edgePreviewY: 186}`
+- NEW: `{edgePreviewX: 332, edgePreviewY: 304}`
+
+`edgePreviewY` is now calculated way too high!
+
+Turns out this was because there was an extra `<h1>` element, pushing down the graph to make mouse coords out of sync. We need to use some offset as well!
+
+Solved by getting svgcontainer and adjusting (subtracting) using `offsetLeft` and `offsetTop`.
+
 ## Getting started
 
 First read these articles!!

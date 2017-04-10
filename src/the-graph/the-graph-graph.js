@@ -115,6 +115,7 @@ module.exports.register = function (context) {
     },
     edgePreview: null,
     edgeStart: function (event) {
+      console.log('Graph edgeStart', event);
       // Forwarded from App.edgeStart()
 
       // Port that triggered this
@@ -172,19 +173,59 @@ module.exports.register = function (context) {
         this.markDirty();
       }
     },
+    // TODO: adjust using ScreenX and ScreenY
     renderPreviewEdge: function (event) {
+      console.log('renderPreviewEdge', event);
       var x = event.x || event.clientX || 0;
       var y = event.y || event.clientY || 0;
-      x -= this.props.app.state.offsetX || 0;
-      y -= this.props.app.state.offsetY || 0;
-      var scale = this.props.app.state.scale;
-      this.setState({
-        edgePreviewX: (x - this.props.app.state.x) / scale,
-        edgePreviewY: (y - this.props.app.state.y) / scale
+      var state = this.props.app.state
+
+      x -= state.offsetX || 0;
+      y -= state.offsetY || 0;
+      var scale = state.scale;
+
+      // this.shadowRoot.querySelector('#svgcontainer') || {}
+      let appProps = this.props.app.props
+      console.log('appProps', appProps)
+      var svgcontainer = appProps.svgcontainer || {};
+      var offX = svgcontainer.offsetLeft
+      var offY = svgcontainer.offsetTop
+
+      // http://stackoverflow.com/questions/442404/retrieve-the-position-x-y-of-an-html-element
+      console.log('svgcontainer', {
+        offX,
+        offY,
+      })
+      console.log('coords + offsets', {
+        scale,
+        offX,
+        offY,
+        x,
+        y,
+        offsetX: state.offsetX,
+        offsetY: state.offsetY,
+        stateX: state.x,
+        stateY: state.y,
       });
+
+
+      var edgePreviewX = ((x - state.x) / scale) - offX
+      var edgePreviewY = ((y - state.y) / scale) - offY
+
+      var edgePreview = {
+        scale,
+        edgePreviewX,
+        edgePreviewY,
+      }
+
+      console.log('edgePreview', edgePreview);
+
+      this.setState(edgePreview);
+
       this.markDirty();
     },
     addEdge: function (edge) {
+      console.log('Graph addEdge', edge);
       this.state.graph.addEdge(edge.from.process, edge.from.port, edge.to.process, edge.to.port, edge.metadata);
     },
     moveGroup: function (nodes, dx, dy) {
@@ -303,6 +344,7 @@ module.exports.register = function (context) {
       return port;
     },
     resetPortRoute: function (event) {
+      console.log('resetPortRoute', event)
       // Trigger nodes with changed ports to rerender
       if (event.from && event.from.node) {
         var fromNode = this.portInfo[event.from.node];
@@ -395,24 +437,24 @@ module.exports.register = function (context) {
     dirty: false,
     libraryDirty: false,
     markDirty: function (event) {
-      console.log('markDirty', event)
+      // console.log('markDirty', event)
       if (event && event.libraryDirty) {
         this.libraryDirty = true;
       }
       window.requestAnimationFrame(this.triggerRender);
     },
     triggerRender: function (time) {
-      console.log('triggerRender', time)
+      // console.log('triggerRender', time)
       if (!this.isMounted()) {
-        console.log('not mounted')
+        // console.log('not mounted')
         return;
       }
       if (this.dirty) {
-        console.log('is dirty')
+        // console.log('is dirty')
         return;
       }
       this.dirty = true;
-      console.log('forceUpdate', this.dirty)
+      // console.log('forceUpdate', this.dirty)
       this.forceUpdate();
     },
     shouldComponentUpdate: function () {
@@ -421,7 +463,7 @@ module.exports.register = function (context) {
       return this.dirty;
     },
     render: function () {
-      console.log('Graph render');
+      // console.log('Graph render');
       this.dirty = false;
 
       var self = this;
@@ -445,6 +487,7 @@ module.exports.register = function (context) {
       }
 
       // Nodes
+      // console.log('draw nodes')
       var nodes = graph.nodes.map(function (node) {
         var componentInfo = self.getComponentInfo(node.component);
         var key = node.id;
@@ -514,6 +557,7 @@ module.exports.register = function (context) {
       });
 
       // Edges
+      // console.log('draw edges')
       var edges = graph.edges.map(function (edge) {
         var source = graph.getNode(edge.from.node);
         var target = graph.getNode(edge.to.node);

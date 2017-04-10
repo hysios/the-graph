@@ -217,6 +217,7 @@
         this.$.svgcontainer.innerHTML = "";
 
         var app = {
+          svgcontainer: this.$.svgcontainer,
           graph: graph,
           width: this.width,
           minZoom: this.minZoom,
@@ -259,7 +260,11 @@
           if (this.selectedEdges.length > 0) {
             this.selectedEdges = [];
           }
-          this.dispatchEvent('edges', this.selectedEdges);
+          var edgesSelectedEvent = new CustomEvent('edges', {
+            detail: this.selectedEdges,
+            bubbles: true
+          })
+          this.dispatchEvent(edgesSelectedEvent);
           return;
         }
         if (toggle) {

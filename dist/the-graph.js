@@ -11246,6 +11246,8 @@ module.exports.register = function (context) {
     },
     edgeStart: function (event) {
       // Listened from PortMenu.edgeStart() and Port.edgeStart()
+      console.log('App edgeStart', event)
+      // calls TheGraph .edgeStart
       this.refs.graph.edgeStart(event);
       this.hideContext();
     },
@@ -11779,14 +11781,14 @@ module.exports.register = function (context) {
   };
 
   function createEdgePathArray(sourceX, sourceY, c1X, c1Y, c2X, c2Y, targetX, targetY) {
-      return [
-        "M",
-        sourceX, sourceY,
-        "C",
-        c1X, c1Y,
-        c2X, c2Y,
-        targetX, targetY
-      ];
+    return [
+      "M",
+      sourceX, sourceY,
+      "C",
+      c1X, c1Y,
+      c2X, c2Y,
+      targetX, targetY
+    ];
   }
 
   // Const
@@ -11812,24 +11814,23 @@ module.exports.register = function (context) {
     // Point on the curve between blue points
     var x = b1x * p + b2x * op;
     var y = b1y * p + b2y * op;
-    return [x, y];    
+    return [x, y];
   };
 
 
   // Edge view
 
-  TheGraph.Edge = React.createFactory( React.createClass({
+  TheGraph.Edge = React.createFactory(React.createClass({
     displayName: "TheGraphEdge",
     mixins: [
       TheGraph.mixins.Tooltip
     ],
-    componentWillMount: function() {
-    },
+    componentWillMount: function () {},
     componentDidMount: function () {
       var domNode = ReactDOM.findDOMNode(this);
 
       // Dragging
-      domNode.addEventListener("trackstart", this.dontPan);
+      domNode.addEventListener("track", this.trackHandler);
 
       if (this.props.onEdgeSelection) {
         // Needs to be click (not tap) to get event.shiftKey
@@ -11842,9 +11843,16 @@ module.exports.register = function (context) {
         domNode.addEventListener("hold", this.showContext);
       }
     },
+    trackHandler: function (event) {
+      switch (event.detail.state) {
+        case 'start':
+          this.dontPan(event);
+      }
+    },
+
     dontPan: function (event) {
       // Don't drag under menu
-      if (this.props.app.menuShown) { 
+      if (this.props.app.menuShown) {
         event.stopPropagation();
       }
     },
@@ -11852,7 +11860,7 @@ module.exports.register = function (context) {
       // Don't click app
       event.stopPropagation();
 
-      var toggle = (TheGraph.metaKeyPressed || event.pointerType==="touch");
+      var toggle = (TheGraph.metaKeyPressed || event.pointerType === "touch");
       this.props.onEdgeSelection(this.props.edgeID, this.props.edge, toggle);
     },
     showContext: function (event) {
@@ -11861,7 +11869,9 @@ module.exports.register = function (context) {
 
       // Don't tap graph on hold event
       event.stopPropagation();
-      if (event.preventTap) { event.preventTap(); }
+      if (event.preventTap) {
+        event.preventTap();
+      }
 
       // Get mouse position
       var x = event.x || event.clientX || 0;
@@ -11889,11 +11899,15 @@ module.exports.register = function (context) {
       });
     },
     shouldComponentUpdate: function (nextProps, nextState) {
+      console.log('Edge shouldComponentUpdate', {
+        nextProps,
+        props: this.props
+      })
       // Only rerender if changed
       return (
-        nextProps.sX !== this.props.sX || 
+        nextProps.sX !== this.props.sX ||
         nextProps.sY !== this.props.sY ||
-        nextProps.tX !== this.props.tX || 
+        nextProps.tX !== this.props.tX ||
         nextProps.tY !== this.props.tY ||
         nextProps.selected !== this.props.selected ||
         nextProps.animated !== this.props.animated ||
@@ -11912,11 +11926,18 @@ module.exports.register = function (context) {
       var targetX = this.props.tX;
       var targetY = this.props.tY;
 
+      console.log('Edge render', {
+        sourceX,
+        sourceY,
+        targetX,
+        targetY
+      });
+
       // Organic / curved edge
       var c1X, c1Y, c2X, c2Y;
-      if (targetX-5 < sourceX) {
+      if (targetX - 5 < sourceX) {
         var curveFactor = (sourceX - targetX) * CURVE / 200;
-        if (Math.abs(targetY-sourceY) < TheGraph.config.nodeSize/2) {
+        if (Math.abs(targetY - sourceY) < TheGraph.config.nodeSize / 2) {
           // Loopback
           c1X = sourceX + curveFactor;
           c1Y = sourceY - curveFactor;
@@ -11931,7 +11952,7 @@ module.exports.register = function (context) {
         }
       } else {
         // Controls halfway between
-        c1X = sourceX + (targetX - sourceX)/2;
+        c1X = sourceX + (targetX - sourceX) / 2;
         c1Y = sourceY;
         c2X = c1X;
         c2Y = targetY;
@@ -11942,19 +11963,26 @@ module.exports.register = function (context) {
       var path = TheGraph.factories.edge.createEdgePathArray(sourceX, sourceY, c1X, c1Y, c2X, c2Y, targetX, targetY);
       path = path.join(" ");
 
-      var backgroundPathOptions = TheGraph.merge(TheGraph.config.edge.backgroundPath, { d: path });
+      var backgroundPathOptions = TheGraph.merge(TheGraph.config.edge.backgroundPath, {
+        d: path
+      });
       var backgroundPath = TheGraph.factories.edge.createEdgeBackgroundPath(backgroundPathOptions);
 
       var foregroundPathClassName = TheGraph.config.edge.foregroundPath.className + this.props.route;
-      var foregroundPathOptions = TheGraph.merge(TheGraph.config.edge.foregroundPath, { d: path, className: foregroundPathClassName });
+      var foregroundPathOptions = TheGraph.merge(TheGraph.config.edge.foregroundPath, {
+        d: path,
+        className: foregroundPathClassName
+      });
       var foregroundPath = TheGraph.factories.edge.createEdgeForegroundPath(foregroundPathOptions);
 
-      var touchPathOptions = TheGraph.merge(TheGraph.config.edge.touchPath, { d: path });
+      var touchPathOptions = TheGraph.merge(TheGraph.config.edge.touchPath, {
+        d: path
+      });
       var touchPath = TheGraph.factories.edge.createEdgeTouchPath(touchPathOptions);
 
       var containerOptions = {
-        className: "edge"+
-          (this.props.selected ? " selected" : "")+
+        className: "edge" +
+          (this.props.selected ? " selected" : "") +
           (this.props.animated ? " animated" : ""),
         title: this.props.label
       };
@@ -11976,10 +12004,10 @@ module.exports.register = function (context) {
 
       // find point on line y = mx + b that is `offset` away from x,y
       var findLinePoint = function (x, y, m, b, offset, flip) {
-        var x1 = x + offset/Math.sqrt(1 + m*m);
+        var x1 = x + offset / Math.sqrt(1 + m * m);
         var y1;
         if (Math.abs(m) === Infinity) {
-          y1 = y + (flip || 1) *offset;
+          y1 = y + (flip || 1) * offset;
         } else {
           y1 = (m * x1) + b;
         }
@@ -11991,14 +12019,14 @@ module.exports.register = function (context) {
       if (plus[0] > minus[0]) {
         arrowLength *= -1;
       }
-      center = findLinePoint(center[0], center[1], m, b, -1*arrowLength/2);
+      center = findLinePoint(center[0], center[1], m, b, -1 * arrowLength / 2);
 
       // find points of perpendicular line length l centered at x,y
       var perpendicular = function (x, y, oldM, l) {
-        var m = -1/oldM;
-        var b = y - m*x;
-        var point1 = findLinePoint(x, y, m, b, l/2);
-        var point2 = findLinePoint(x, y, m, b, l/-2);
+        var m = -1 / oldM;
+        var b = y - m * x;
+        var point1 = findLinePoint(x, y, m, b, l / 2);
+        var point2 = findLinePoint(x, y, m, b, l / -2);
         return [point1, point2];
       };
 
@@ -12009,7 +12037,9 @@ module.exports.register = function (context) {
       points.push(arrowTip);
 
       var pointsArray = points.map(
-        function (point) {return point.join(',');}).join(' ');
+        function (point) {
+          return point.join(',');
+        }).join(' ');
       var arrowBg = TheGraph.factories.edge.createArrow({
         points: pointsArray,
         className: 'arrow-bg'
@@ -12020,13 +12050,11 @@ module.exports.register = function (context) {
         className: 'arrow fill route' + this.props.route
       });
 
-      return TheGraph.factories.edge.createEdgeGroup(containerOptions,
-         [backgroundPath, arrowBg, foregroundPath, touchPath, arrow]);
+      return TheGraph.factories.edge.createEdgeGroup(containerOptions, [backgroundPath, arrowBg, foregroundPath, touchPath, arrow]);
     }
   }));
 
 };
-
 },{}],25:[function(require,module,exports){
 module.exports.register = function (context) {
 
@@ -12145,6 +12173,7 @@ module.exports.register = function (context) {
     },
     edgePreview: null,
     edgeStart: function (event) {
+      console.log('Graph edgeStart', event);
       // Forwarded from App.edgeStart()
 
       // Port that triggered this
@@ -12202,19 +12231,59 @@ module.exports.register = function (context) {
         this.markDirty();
       }
     },
+    // TODO: adjust using ScreenX and ScreenY
     renderPreviewEdge: function (event) {
+      console.log('renderPreviewEdge', event);
       var x = event.x || event.clientX || 0;
       var y = event.y || event.clientY || 0;
-      x -= this.props.app.state.offsetX || 0;
-      y -= this.props.app.state.offsetY || 0;
-      var scale = this.props.app.state.scale;
-      this.setState({
-        edgePreviewX: (x - this.props.app.state.x) / scale,
-        edgePreviewY: (y - this.props.app.state.y) / scale
+      var state = this.props.app.state
+
+      x -= state.offsetX || 0;
+      y -= state.offsetY || 0;
+      var scale = state.scale;
+
+      // this.shadowRoot.querySelector('#svgcontainer') || {}
+      let appProps = this.props.app.props
+      console.log('appProps', appProps)
+      var svgcontainer = appProps.svgcontainer || {};
+      var offX = svgcontainer.offsetLeft
+      var offY = svgcontainer.offsetTop
+
+      // http://stackoverflow.com/questions/442404/retrieve-the-position-x-y-of-an-html-element
+      console.log('svgcontainer', {
+        offX,
+        offY,
+      })
+      console.log('coords + offsets', {
+        scale,
+        offX,
+        offY,
+        x,
+        y,
+        offsetX: state.offsetX,
+        offsetY: state.offsetY,
+        stateX: state.x,
+        stateY: state.y,
       });
+
+
+      var edgePreviewX = ((x - state.x) / scale) - offX
+      var edgePreviewY = ((y - state.y) / scale) - offY
+
+      var edgePreview = {
+        scale,
+        edgePreviewX,
+        edgePreviewY,
+      }
+
+      console.log('edgePreview', edgePreview);
+
+      this.setState(edgePreview);
+
       this.markDirty();
     },
     addEdge: function (edge) {
+      console.log('Graph addEdge', edge);
       this.state.graph.addEdge(edge.from.process, edge.from.port, edge.to.process, edge.to.port, edge.metadata);
     },
     moveGroup: function (nodes, dx, dy) {
@@ -12333,6 +12402,7 @@ module.exports.register = function (context) {
       return port;
     },
     resetPortRoute: function (event) {
+      console.log('resetPortRoute', event)
       // Trigger nodes with changed ports to rerender
       if (event.from && event.from.node) {
         var fromNode = this.portInfo[event.from.node];
@@ -12425,24 +12495,24 @@ module.exports.register = function (context) {
     dirty: false,
     libraryDirty: false,
     markDirty: function (event) {
-      console.log('markDirty', event)
+      // console.log('markDirty', event)
       if (event && event.libraryDirty) {
         this.libraryDirty = true;
       }
       window.requestAnimationFrame(this.triggerRender);
     },
     triggerRender: function (time) {
-      console.log('triggerRender', time)
+      // console.log('triggerRender', time)
       if (!this.isMounted()) {
-        console.log('not mounted')
+        // console.log('not mounted')
         return;
       }
       if (this.dirty) {
-        console.log('is dirty')
+        // console.log('is dirty')
         return;
       }
       this.dirty = true;
-      console.log('forceUpdate', this.dirty)
+      // console.log('forceUpdate', this.dirty)
       this.forceUpdate();
     },
     shouldComponentUpdate: function () {
@@ -12451,7 +12521,7 @@ module.exports.register = function (context) {
       return this.dirty;
     },
     render: function () {
-      console.log('Graph render');
+      // console.log('Graph render');
       this.dirty = false;
 
       var self = this;
@@ -12475,6 +12545,7 @@ module.exports.register = function (context) {
       }
 
       // Nodes
+      // console.log('draw nodes')
       var nodes = graph.nodes.map(function (node) {
         var componentInfo = self.getComponentInfo(node.component);
         var key = node.id;
@@ -12544,6 +12615,7 @@ module.exports.register = function (context) {
       });
 
       // Edges
+      // console.log('draw edges')
       var edges = graph.edges.map(function (edge) {
         var source = graph.getNode(edge.from.node);
         var target = graph.getNode(edge.to.node);
@@ -14602,25 +14674,42 @@ module.exports.register = function (context) {
 
   // Port view
 
-  TheGraph.Port = React.createFactory( React.createClass({
+  TheGraph.Port = React.createFactory(React.createClass({
     displayName: "TheGraphPort",
     mixins: [
       TheGraph.mixins.Tooltip
     ],
     componentDidMount: function () {
+      let node = ReactDOM.findDOMNode(this);
       // Preview edge start
-      ReactDOM.findDOMNode(this).addEventListener("tap", this.edgeStart);
-      ReactDOM.findDOMNode(this).addEventListener("trackstart", this.edgeStart);
+      node.addEventListener("tap", this.edgeStart);
       // Make edge
-      ReactDOM.findDOMNode(this).addEventListener("trackend", this.triggerDropOnTarget);
-      ReactDOM.findDOMNode(this).addEventListener("the-graph-edge-drop", this.edgeStart);
+      node.addEventListener("track", this.trackHandler);
+      node.addEventListener("the-graph-edge-drop", this.edgeStart);
 
       // Show context menu
       if (this.props.showContext) {
-        ReactDOM.findDOMNode(this).addEventListener("contextmenu", this.showContext);
-        ReactDOM.findDOMNode(this).addEventListener("hold", this.showContext);
+        node.addEventListener("contextmenu", this.showContext);
+        node.addEventListener("hold", this.showContext);
       }
     },
+    trackHandler: function (event) {
+      // Don't fire on graph
+      event.stopPropagation();
+      console.log('track state', event.detail.state);
+      switch (event.detail.state) {
+        case 'start':
+          this.edgeStart(event);
+          break;
+        case 'track':
+          // this._onTrack(event);
+          break;
+        case 'end':
+          this.triggerDropOnTarget(event);
+          break;
+      }
+    },
+
     getTooltipTrigger: function () {
       return ReactDOM.findDOMNode(this);
     },
@@ -14644,7 +14733,9 @@ module.exports.register = function (context) {
 
       // Don't tap graph on hold event
       event.stopPropagation();
-      if (event.preventTap) { event.preventTap(); }
+      if (event.preventTap) {
+        event.preventTap();
+      }
 
       // Get mouse position
       var x = event.x || event.clientX || 0;
@@ -14670,6 +14761,7 @@ module.exports.register = function (context) {
       });
     },
     edgeStart: function (event) {
+      console.log('edgeStart', event)
       // Don't start edge on export node port
       if (this.props.isExport) {
         return;
@@ -14693,19 +14785,24 @@ module.exports.register = function (context) {
       ReactDOM.findDOMNode(this).dispatchEvent(edgeStartEvent);
     },
     triggerDropOnTarget: function (event) {
+      console.log('triggerDropOnTarget', event)
       // If dropped on a child element will bubble up to port
-      if (!event.relatedTarget) { return; }
+      if (!event.relatedTarget) {
+        return;
+      }
       var dropEvent = new CustomEvent('the-graph-edge-drop', {
         detail: null,
         bubbles: true
       });
       event.relatedTarget.dispatchEvent(dropEvent);
     },
-    render: function() {
+    render: function () {
       var style;
       if (this.props.label.length > 7) {
         var fontSize = 6 * (30 / (4 * this.props.label.length));
-        style = { 'fontSize': fontSize+'px' };
+        style = {
+          'fontSize': fontSize + 'px'
+        };
       }
       var r = 4;
       // Highlight matching ports
@@ -14718,14 +14815,18 @@ module.exports.register = function (context) {
         outArc = TheGraph.arcs.outportBig;
       }
 
-      var backgroundCircleOptions = TheGraph.merge(TheGraph.config.port.backgroundCircle, { r: r + 1 });
+      var backgroundCircleOptions = TheGraph.merge(TheGraph.config.port.backgroundCircle, {
+        r: r + 1
+      });
       var backgroundCircle = TheGraph.factories.port.createPortBackgroundCircle.call(this, backgroundCircleOptions);
 
-      var arcOptions = TheGraph.merge(TheGraph.config.port.arc, { d: (this.props.isIn ? inArc : outArc) });
+      var arcOptions = TheGraph.merge(TheGraph.config.port.arc, {
+        d: (this.props.isIn ? inArc : outArc)
+      });
       var arc = TheGraph.factories.port.createPortArc.call(this, arcOptions);
 
       var innerCircleOptions = {
-        className: "port-circle-small fill route"+this.props.route,
+        className: "port-circle-small fill route" + this.props.route,
         r: r - 1.5
       };
 
@@ -14747,7 +14848,10 @@ module.exports.register = function (context) {
         labelText
       ];
 
-      var containerOptions = TheGraph.merge(TheGraph.config.port.container, { title: this.props.label, transform: "translate("+this.props.x+","+this.props.y+")" });
+      var containerOptions = TheGraph.merge(TheGraph.config.port.container, {
+        title: this.props.label,
+        transform: "translate(" + this.props.x + "," + this.props.y + ")"
+      });
       return TheGraph.factories.port.createPortGroup.call(this, containerOptions, portContents);
 
     }
@@ -14755,7 +14859,6 @@ module.exports.register = function (context) {
 
 
 };
-
 },{}],35:[function(require,module,exports){
 module.exports.register = function (context) {
 
@@ -14896,7 +14999,7 @@ module.exports.register = function (context) {
   };
 
   TheGraph.findMinMax = function (graph, nodes) {
-    console.log('findMinMax', graph)
+    // console.log('findMinMax', graph)
     var inports, outports;
     if (nodes === undefined) {
       nodes = graph.nodes.map(function (node) {

@@ -323,6 +323,8 @@ module.exports.register = function (context) {
     },
     edgeStart: function (event) {
       // Listened from PortMenu.edgeStart() and Port.edgeStart()
+      console.log('App edgeStart', event)
+      // calls TheGraph .edgeStart
       this.refs.graph.edgeStart(event);
       this.hideContext();
     },

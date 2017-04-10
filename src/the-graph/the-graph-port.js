@@ -32,25 +32,42 @@ module.exports.register = function (context) {
 
   // Port view
 
-  TheGraph.Port = React.createFactory( React.createClass({
+  TheGraph.Port = React.createFactory(React.createClass({
     displayName: "TheGraphPort",
     mixins: [
       TheGraph.mixins.Tooltip
     ],
     componentDidMount: function () {
+      let node = ReactDOM.findDOMNode(this);
       // Preview edge start
-      ReactDOM.findDOMNode(this).addEventListener("tap", this.edgeStart);
-      ReactDOM.findDOMNode(this).addEventListener("trackstart", this.edgeStart);
+      node.addEventListener("tap", this.edgeStart);
       // Make edge
-      ReactDOM.findDOMNode(this).addEventListener("trackend", this.triggerDropOnTarget);
-      ReactDOM.findDOMNode(this).addEventListener("the-graph-edge-drop", this.edgeStart);
+      node.addEventListener("track", this.trackHandler);
+      node.addEventListener("the-graph-edge-drop", this.edgeStart);
 
       // Show context menu
       if (this.props.showContext) {
-        ReactDOM.findDOMNode(this).addEventListener("contextmenu", this.showContext);
-        ReactDOM.findDOMNode(this).addEventListener("hold", this.showContext);
+        node.addEventListener("contextmenu", this.showContext);
+        node.addEventListener("hold", this.showContext);
       }
     },
+    trackHandler: function (event) {
+      // Don't fire on graph
+      event.stopPropagation();
+      console.log('track state', event.detail.state);
+      switch (event.detail.state) {
+        case 'start':
+          this.edgeStart(event);
+          break;
+        case 'track':
+          // this._onTrack(event);
+          break;
+        case 'end':
+          this.triggerDropOnTarget(event);
+          break;
+      }
+    },
+
     getTooltipTrigger: function () {
       return ReactDOM.findDOMNode(this);
     },
@@ -74,7 +91,9 @@ module.exports.register = function (context) {
 
       // Don't tap graph on hold event
       event.stopPropagation();
-      if (event.preventTap) { event.preventTap(); }
+      if (event.preventTap) {
+        event.preventTap();
+      }
 
       // Get mouse position
       var x = event.x || event.clientX || 0;
@@ -100,6 +119,7 @@ module.exports.register = function (context) {
       });
     },
     edgeStart: function (event) {
+      console.log('edgeStart', event)
       // Don't start edge on export node port
       if (this.props.isExport) {
         return;
@@ -123,19 +143,24 @@ module.exports.register = function (context) {
       ReactDOM.findDOMNode(this).dispatchEvent(edgeStartEvent);
     },
     triggerDropOnTarget: function (event) {
+      console.log('triggerDropOnTarget', event)
       // If dropped on a child element will bubble up to port
-      if (!event.relatedTarget) { return; }
+      if (!event.relatedTarget) {
+        return;
+      }
       var dropEvent = new CustomEvent('the-graph-edge-drop', {
         detail: null,
         bubbles: true
       });
       event.relatedTarget.dispatchEvent(dropEvent);
     },
-    render: function() {
+    render: function () {
       var style;
       if (this.props.label.length > 7) {
         var fontSize = 6 * (30 / (4 * this.props.label.length));
-        style = { 'fontSize': fontSize+'px' };
+        style = {
+          'fontSize': fontSize + 'px'
+        };
       }
       var r = 4;
       // Highlight matching ports
@@ -148,14 +173,18 @@ module.exports.register = function (context) {
         outArc = TheGraph.arcs.outportBig;
       }
 
-      var backgroundCircleOptions = TheGraph.merge(TheGraph.config.port.backgroundCircle, { r: r + 1 });
+      var backgroundCircleOptions = TheGraph.merge(TheGraph.config.port.backgroundCircle, {
+        r: r + 1
+      });
       var backgroundCircle = TheGraph.factories.port.createPortBackgroundCircle.call(this, backgroundCircleOptions);
 
-      var arcOptions = TheGraph.merge(TheGraph.config.port.arc, { d: (this.props.isIn ? inArc : outArc) });
+      var arcOptions = TheGraph.merge(TheGraph.config.port.arc, {
+        d: (this.props.isIn ? inArc : outArc)
+      });
       var arc = TheGraph.factories.port.createPortArc.call(this, arcOptions);
 
       var innerCircleOptions = {
-        className: "port-circle-small fill route"+this.props.route,
+        className: "port-circle-small fill route" + this.props.route,
         r: r - 1.5
       };
 
@@ -177,7 +206,10 @@ module.exports.register = function (context) {
         labelText
       ];
 
-      var containerOptions = TheGraph.merge(TheGraph.config.port.container, { title: this.props.label, transform: "translate("+this.props.x+","+this.props.y+")" });
+      var containerOptions = TheGraph.merge(TheGraph.config.port.container, {
+        title: this.props.label,
+        transform: "translate(" + this.props.x + "," + this.props.y + ")"
+      });
       return TheGraph.factories.port.createPortGroup.call(this, containerOptions, portContents);
 
     }
