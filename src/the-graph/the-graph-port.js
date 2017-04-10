@@ -119,18 +119,19 @@ module.exports.register = function (context) {
       });
     },
     edgeStart: function (event) {
-      console.log('edgeStart', event)
+      console.log('port edgeStart', event)
       // Don't start edge on export node port
       if (this.props.isExport) {
+        console.log('was export node port');
         return;
       }
       // Click on label, pass context menu to node
       if (event && (event.target === ReactDOM.findDOMNode(this.refs.label))) {
+        console.log('was on label');
         return;
       }
       // Don't tap graph
       event.stopPropagation();
-
       var edgeStartEvent = new CustomEvent('the-graph-edge-start', {
         detail: {
           isIn: this.props.isIn,
@@ -140,19 +141,27 @@ module.exports.register = function (context) {
         },
         bubbles: true
       });
-      ReactDOM.findDOMNode(this).dispatchEvent(edgeStartEvent);
+      let node = ReactDOM.findDOMNode(this)
+      console.log('dispatch edgeStartEvent', edgeStartEvent)
+      node.dispatchEvent(edgeStartEvent);
     },
     triggerDropOnTarget: function (event) {
       console.log('triggerDropOnTarget', event)
       // If dropped on a child element will bubble up to port
-      if (!event.relatedTarget) {
+      var target = event.relatedTarget || event.target
+      if (!target) {
+        console.log('is child element, bubble up', {
+          target: target
+        })
         return;
       }
       var dropEvent = new CustomEvent('the-graph-edge-drop', {
         detail: null,
         bubbles: true
       });
-      event.relatedTarget.dispatchEvent(dropEvent);
+      let targetNode = target
+      console.log('dispatch edge drop event', dropEvent, targetNode)
+      targetNode.dispatchEvent(dropEvent);
     },
     render: function () {
       var style;

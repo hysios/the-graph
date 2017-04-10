@@ -114,6 +114,12 @@ module.exports.register = function (context) {
       ReactDOM.findDOMNode(this).addEventListener("the-graph-node-remove", this.removeNode);
     },
     edgePreview: null,
+
+    isValidEdgeConnection(event) {
+      let edgePreview = this.state.edgePreview
+      if (!edgePreview) return false;
+      return edgePreview.isIn !== event.detail.isIn
+    },
     edgeStart: function (event) {
       console.log('Graph edgeStart', event);
       // Forwarded from App.edgeStart()
@@ -122,7 +128,12 @@ module.exports.register = function (context) {
       var port = event.detail.port;
 
       // Complete edge if this is the second tap and ports are compatible
-      if (this.state.edgePreview && this.state.edgePreview.isIn !== event.detail.isIn) {
+      var isCon = this.isValidEdgeConnection(event)
+      console.log('isCon', isCon, {
+        event,
+        edgePreview: this.state.edgePreview
+      })
+      if (this.isValidEdgeConnection(event)) {
         // TODO also check compatible types
         var halfEdge = this.state.edgePreview;
         if (event.detail.isIn) {
@@ -175,7 +186,7 @@ module.exports.register = function (context) {
     },
     // TODO: adjust using ScreenX and ScreenY
     renderPreviewEdge: function (event) {
-      console.log('renderPreviewEdge', event);
+      // console.log('renderPreviewEdge', event);
       var x = event.x || event.clientX || 0;
       var y = event.y || event.clientY || 0;
       var state = this.props.app.state
@@ -186,27 +197,27 @@ module.exports.register = function (context) {
 
       // this.shadowRoot.querySelector('#svgcontainer') || {}
       let appProps = this.props.app.props
-      console.log('appProps', appProps)
+      // console.log('appProps', appProps)
       var svgcontainer = appProps.svgcontainer || {};
       var offX = svgcontainer.offsetLeft
       var offY = svgcontainer.offsetTop
 
       // http://stackoverflow.com/questions/442404/retrieve-the-position-x-y-of-an-html-element
-      console.log('svgcontainer', {
-        offX,
-        offY,
-      })
-      console.log('coords + offsets', {
-        scale,
-        offX,
-        offY,
-        x,
-        y,
-        offsetX: state.offsetX,
-        offsetY: state.offsetY,
-        stateX: state.x,
-        stateY: state.y,
-      });
+      // console.log('svgcontainer', {
+      //   offX,
+      //   offY,
+      // })
+      // console.log('coords + offsets', {
+      //   scale,
+      //   offX,
+      //   offY,
+      //   x,
+      //   y,
+      //   offsetX: state.offsetX,
+      //   offsetY: state.offsetY,
+      //   stateX: state.x,
+      //   stateY: state.y,
+      // });
 
 
       var edgePreviewX = ((x - state.x) / scale) - offX
@@ -218,7 +229,7 @@ module.exports.register = function (context) {
         edgePreviewY,
       }
 
-      console.log('edgePreview', edgePreview);
+      // console.log('edgePreview', edgePreview);
 
       this.setState(edgePreview);
 

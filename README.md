@@ -405,6 +405,102 @@ Turns out this was because there was an extra `<h1>` element, pushing down the g
 
 Solved by getting svgcontainer and adjusting (subtracting) using `offsetLeft` and `offsetTop`.
 
+## Complete/connect edge
+
+We need to connect Node ports with edge:
+
+This is controlled from the graph `Port`, where the `trackHandler` calls `triggerDropOnTarget`
+
+```js
+  case 'end':
+    this.triggerDropOnTarget(event);
+```
+
+which (ideally) dispatches a `CustomEvent` called `the-graph-edge-drop`.
+
+```js
+  // If dropped on a child element will bubble up to port
+  if (!event.relatedTarget) {
+    return;
+  }
+
+  var dropEvent = new CustomEvent('the-graph-edge-drop', {
+    detail: null,
+    bubbles: true
+  });
+  event.relatedTarget.dispatchEvent(dropEvent);
+```
+
+However, if dropped a node where [relatedTarget](https://developer.mozilla.org/en-US/docs/Web/API/MouseEvent/relatedTarget) or `target` is `null` then bubble up!?
+
+The handler `node.addEventListener("the-graph-edge-drop", this.edgeStart);` is set to call `edgeStart`
+
+which dispatches `the-graph-edge-start` with info...
+
+```js
+      var edgeStartEvent = new CustomEvent('the-graph-edge-start', {
+        detail: {
+          isIn: this.props.isIn,
+          port: this.props.port,
+          // process: this.props.processKey,
+          route: this.props.route
+        },
+        bubbles: true
+      });
+      ReactDOM.findDOMNode(this).dispatchEvent(edgeStartEvent);
+```
+
+to be caught by Graph `App` handler
+
+```js
+  // Edge preview
+  domNode.addEventListener("the-graph-edge-start", this.edgeStart);
+```
+
+Which calls `edgeStart` of the `Graph`
+
+```js
+    edgeStart: function (event) {
+      // Listened from PortMenu.edgeStart() and Port.edgeStart()
+      console.log('App edgeStart', event)
+      // calls TheGraph .edgeStart
+      this.refs.graph.edgeStart(event);
+      this.hideContext();
+    },
+```
+
+and then the `Graph` will: *Complete edge if this is the second tap and ports are compatible*
+
+```js
+  isValidEdgeConnection(event) {
+    let edgePreview = this.state.edgePreview
+    if (!edgePreview) return false;
+    return edgePreview.isIn !== event.detail.isIn
+  },
+
+  edgeStart: function (event) {
+    // Forwarded from App.edgeStart()
+
+    // Port that triggered this
+    var port = event.detail.port;
+
+    // Complete edge if this is the second tap and ports are compatible
+    if (this.isValidEdgeConnection(event)) {
+      // TODO also check compatible types
+      var halfEdge = this.state.edgePreview;
+      if (event.detail.isIn) {
+        halfEdge.to = port;
+      } else {
+        halfEdge.from = port;
+      }
+      this.addEdge(halfEdge);
+      this.cancelPreviewEdge();
+      return;
+    }
+```
+
+For some reason, `isIn` is false for both the `edgePreview` state and for the event (target). Need to fix this!!!
+
 ## Getting started
 
 First read these articles!!

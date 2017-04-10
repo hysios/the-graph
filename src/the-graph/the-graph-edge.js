@@ -148,10 +148,10 @@ module.exports.register = function (context) {
       });
     },
     shouldComponentUpdate: function (nextProps, nextState) {
-      console.log('Edge shouldComponentUpdate', {
-        nextProps,
-        props: this.props
-      })
+      // console.log('Edge shouldComponentUpdate', {
+      //   nextProps,
+      //   props: this.props
+      // })
       // Only rerender if changed
       return (
         nextProps.sX !== this.props.sX ||

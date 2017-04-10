@@ -11899,10 +11899,10 @@ module.exports.register = function (context) {
       });
     },
     shouldComponentUpdate: function (nextProps, nextState) {
-      console.log('Edge shouldComponentUpdate', {
-        nextProps,
-        props: this.props
-      })
+      // console.log('Edge shouldComponentUpdate', {
+      //   nextProps,
+      //   props: this.props
+      // })
       // Only rerender if changed
       return (
         nextProps.sX !== this.props.sX ||
@@ -12172,6 +12172,10 @@ module.exports.register = function (context) {
       ReactDOM.findDOMNode(this).addEventListener("the-graph-node-remove", this.removeNode);
     },
     edgePreview: null,
+
+    isValidEdgeConnection(event) {
+      return this.state.edgePreview && this.state.edgePreview.isIn !== event.detail.isIn
+    },
     edgeStart: function (event) {
       console.log('Graph edgeStart', event);
       // Forwarded from App.edgeStart()
@@ -12180,7 +12184,12 @@ module.exports.register = function (context) {
       var port = event.detail.port;
 
       // Complete edge if this is the second tap and ports are compatible
-      if (this.state.edgePreview && this.state.edgePreview.isIn !== event.detail.isIn) {
+      var isCon = this.isValidEdgeConnection(event)
+      console.log('isCon', isCon, {
+        event,
+        edgePreview: this.state.edgePreview
+      })
+      if (this.isValidEdgeConnection(event)) {
         // TODO also check compatible types
         var halfEdge = this.state.edgePreview;
         if (event.detail.isIn) {
@@ -12233,7 +12242,7 @@ module.exports.register = function (context) {
     },
     // TODO: adjust using ScreenX and ScreenY
     renderPreviewEdge: function (event) {
-      console.log('renderPreviewEdge', event);
+      // console.log('renderPreviewEdge', event);
       var x = event.x || event.clientX || 0;
       var y = event.y || event.clientY || 0;
       var state = this.props.app.state
@@ -12244,27 +12253,27 @@ module.exports.register = function (context) {
 
       // this.shadowRoot.querySelector('#svgcontainer') || {}
       let appProps = this.props.app.props
-      console.log('appProps', appProps)
+      // console.log('appProps', appProps)
       var svgcontainer = appProps.svgcontainer || {};
       var offX = svgcontainer.offsetLeft
       var offY = svgcontainer.offsetTop
 
       // http://stackoverflow.com/questions/442404/retrieve-the-position-x-y-of-an-html-element
-      console.log('svgcontainer', {
-        offX,
-        offY,
-      })
-      console.log('coords + offsets', {
-        scale,
-        offX,
-        offY,
-        x,
-        y,
-        offsetX: state.offsetX,
-        offsetY: state.offsetY,
-        stateX: state.x,
-        stateY: state.y,
-      });
+      // console.log('svgcontainer', {
+      //   offX,
+      //   offY,
+      // })
+      // console.log('coords + offsets', {
+      //   scale,
+      //   offX,
+      //   offY,
+      //   x,
+      //   y,
+      //   offsetX: state.offsetX,
+      //   offsetY: state.offsetY,
+      //   stateX: state.x,
+      //   stateY: state.y,
+      // });
 
 
       var edgePreviewX = ((x - state.x) / scale) - offX
@@ -12276,7 +12285,7 @@ module.exports.register = function (context) {
         edgePreviewY,
       }
 
-      console.log('edgePreview', edgePreview);
+      // console.log('edgePreview', edgePreview);
 
       this.setState(edgePreview);
 
@@ -14761,18 +14770,19 @@ module.exports.register = function (context) {
       });
     },
     edgeStart: function (event) {
-      console.log('edgeStart', event)
+      console.log('port edgeStart', event)
       // Don't start edge on export node port
       if (this.props.isExport) {
+        console.log('was export node port');
         return;
       }
       // Click on label, pass context menu to node
       if (event && (event.target === ReactDOM.findDOMNode(this.refs.label))) {
+        console.log('was on label');
         return;
       }
       // Don't tap graph
       event.stopPropagation();
-
       var edgeStartEvent = new CustomEvent('the-graph-edge-start', {
         detail: {
           isIn: this.props.isIn,
@@ -14782,19 +14792,27 @@ module.exports.register = function (context) {
         },
         bubbles: true
       });
-      ReactDOM.findDOMNode(this).dispatchEvent(edgeStartEvent);
+      let node = ReactDOM.findDOMNode(this)
+      console.log('dispatch edgeStartEvent', edgeStartEvent)
+      node.dispatchEvent(edgeStartEvent);
     },
     triggerDropOnTarget: function (event) {
       console.log('triggerDropOnTarget', event)
       // If dropped on a child element will bubble up to port
-      if (!event.relatedTarget) {
+      var target = event.relatedTarget || event.target
+      if (!target) {
+        console.log('is child element, bubble up', {
+          target: target
+        })
         return;
       }
       var dropEvent = new CustomEvent('the-graph-edge-drop', {
         detail: null,
         bubbles: true
       });
-      event.relatedTarget.dispatchEvent(dropEvent);
+      let targetNode = target
+      console.log('dispatch edge drop event', dropEvent, targetNode)
+      targetNode.dispatchEvent(dropEvent);
     },
     render: function () {
       var style;
