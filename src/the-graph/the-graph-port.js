@@ -54,8 +54,9 @@ module.exports.register = function (context) {
     trackHandler: function (event) {
       // Don't fire on graph
       event.stopPropagation();
-      console.log('track state', event.detail.state);
-      switch (event.detail.state) {
+      let detail = event.detail
+      console.log('track state', detail.state);
+      switch (detail.state) {
         case 'start':
           this.edgeStart(event);
           break;
@@ -63,6 +64,9 @@ module.exports.register = function (context) {
           // this._onTrack(event);
           break;
         case 'end':
+          let hoverElem = detail.hover()
+          console.log('hover on', hoverElem)
+          event.relatedTarget = hoverElem
           this.triggerDropOnTarget(event);
           break;
       }
@@ -162,7 +166,6 @@ module.exports.register = function (context) {
       // "relatedTarget", optional and defaulting to null, of type EventTarget,
       // that is the element just left (in case of  a mouseenter or mouseover)
       // or is entering (in case of a mouseout or mouseleave).
-
       var target = event.relatedTarget // || sourceEvent.toElement || sourceEvent.fromElement
       console.log('out on', target)
       if (!target) {

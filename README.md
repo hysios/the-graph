@@ -526,7 +526,7 @@ or is entering (in case of a mouseout or mouseleave).
 
 [Explained](http://stackoverflow.com/questions/31865416/what-is-the-difference-between-event-target-event-toelement-and-event-srcelemen) and [mouse events explained](https://www.quirksmode.org/js/events_mouse.html)
 
-IF no relatedTarget, it should bubble up! but doesn't work :()
+IF no `relatedTarget`, it should bubble up! but doesn't work :()
 
 ```
   var target = event.relatedTarget
@@ -537,7 +537,25 @@ IF no relatedTarget, it should bubble up! but doesn't work :()
   }
 ```
 
-Ask on Polymer Slack!!!
+Maybe we have to use `hover()` — a function that may be called to determine the element currently being hovered
+
+```js
+  let hoverElem = event.hover()
+  console.log('hover on', hoverElem)
+```
+
+Yup, finally it works!
+
+```js
+trackHandler: function (event) {
+  // ...
+  case 'end':
+    let hoverElem = detail.hover()
+    console.log('hover on', hoverElem)
+    event.relatedTarget = hoverElem
+```
+
+YUHUUU!!!!
 
 ## Getting started
 
