@@ -115,38 +115,49 @@ module.exports.register = function (context) {
     },
     edgePreview: null,
 
-    isValidEdgeConnection(event) {
-      let edgePreview = this.state.edgePreview
-      if (!edgePreview) return false;
-      return edgePreview.isIn !== event.detail.isIn
-    },
     edgeStart: function (event) {
       console.log('Graph edgeStart', event);
       // Forwarded from App.edgeStart()
 
+      if (typeof event !== 'object') {
+        throw new Error('edgeStart: No event')
+      }
       // Port that triggered this
       var port = event.detail.port;
+      let edgePreview = this.state.edgePreview
+      if (edgePreview) {
+        console.log('edgePreview', edgePreview)
+        console.log('event', event)
+        // Complete edge if this is the second tap and ports are compatible
+        var isCon = edgePreview.isIn !== event.detail.isIn
+        if (isCon) {
+          // TODO also check compatible types
+          var halfEdge = this.state.edgePreview;
+          console.log('ports', {
+            eventPort: port,
+            edgePort: edgePreview.port
+          })
+          console.log('Half edge before', halfEdge)
 
-      // Complete edge if this is the second tap and ports are compatible
-      var isCon = this.isValidEdgeConnection(event)
-      console.log('isCon', isCon, {
-        event,
-        edgePreview: this.state.edgePreview
-      })
-      if (this.isValidEdgeConnection(event)) {
-        // TODO also check compatible types
-        var halfEdge = this.state.edgePreview;
-        if (event.detail.isIn) {
-          halfEdge.to = port;
-        } else {
-          halfEdge.from = port;
+          if (event.detail.isIn) {
+            halfEdge.to = port;
+          } else {
+            halfEdge.from = port;
+          }
+          // set missing to or from to port
+          // halfEdge.to = halfEdge.to || port
+          // halfEdge.from = halfEdge.from || port
+
+          console.log('Half edge', halfEdge)
+          this.addEdge(halfEdge);
+          this.cancelPreviewEdge();
+          return;
         }
-        this.addEdge(halfEdge);
-        this.cancelPreviewEdge();
-        return;
       }
 
       var edge;
+      console.log('edge to use for connect', edge)
+
       if (event.detail.isIn) {
         edge = {
           to: port
@@ -161,6 +172,7 @@ module.exports.register = function (context) {
         route: event.detail.route
       };
       edge.type = event.detail.port.type;
+      console.log('edge to connect with', edge)
 
       var appDomNode = ReactDOM.findDOMNode(this.props.app);
       appDomNode.addEventListener("mousemove", this.renderPreviewEdge);
@@ -237,6 +249,13 @@ module.exports.register = function (context) {
     },
     addEdge: function (edge) {
       console.log('Graph addEdge', edge);
+      if (!(edge.from && edge.to)) {
+        console.error('Half edge', {
+          from: edge.from,
+          to: edge.to
+        })
+        return
+      }
       this.state.graph.addEdge(edge.from.process, edge.from.port, edge.to.process, edge.to.port, edge.metadata);
     },
     moveGroup: function (nodes, dx, dy) {

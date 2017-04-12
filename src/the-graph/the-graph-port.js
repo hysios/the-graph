@@ -125,6 +125,7 @@ module.exports.register = function (context) {
         console.log('was export node port');
         return;
       }
+
       // Click on label, pass context menu to node
       if (event && (event.target === ReactDOM.findDOMNode(this.refs.label))) {
         console.log('was on label');
@@ -142,13 +143,28 @@ module.exports.register = function (context) {
         bubbles: true
       });
       let node = ReactDOM.findDOMNode(this)
-      console.log('dispatch edgeStartEvent', edgeStartEvent)
+      console.log('PORT', this.props.port.port)
+      console.log('edgeStart: dispatch the-graph-edge-start', {
+        event: edgeStartEvent,
+        props: this.props
+      })
       node.dispatchEvent(edgeStartEvent);
     },
     triggerDropOnTarget: function (event) {
       console.log('triggerDropOnTarget', event)
+      console.log('detail', event.detail)
+      console.log('sourceEvent', event.detail.sourceEvent)
+      let sourceEvent = event.detail.sourceEvent
+
+      // throw new Error('fuck')
       // If dropped on a child element will bubble up to port
-      var target = event.relatedTarget || event.target
+
+      // "relatedTarget", optional and defaulting to null, of type EventTarget,
+      // that is the element just left (in case of  a mouseenter or mouseover)
+      // or is entering (in case of a mouseout or mouseleave).
+
+      var target = event.relatedTarget // || sourceEvent.toElement || sourceEvent.fromElement
+      console.log('out on', target)
       if (!target) {
         console.log('is child element, bubble up', {
           target: target
@@ -160,7 +176,7 @@ module.exports.register = function (context) {
         bubbles: true
       });
       let targetNode = target
-      console.log('dispatch edge drop event', dropEvent, targetNode)
+      console.log('triggerDropOnTarget: dispatch edge drop event', dropEvent, targetNode)
       targetNode.dispatchEvent(dropEvent);
     },
     render: function () {

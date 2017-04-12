@@ -76,12 +76,13 @@ module.exports.register = function (context) {
   };
 
   function createNodePort(options) {
+    // console.log('createNodePort', options)
     return TheGraph.Port(options);
   }
 
   // PolymerGestures monkeypatch
   function patchGestures() {
-    console.log('patchGestures: currently disabled :(')
+    // console.log('patchGestures: currently disabled :(')
     // Polymer.Gestures.
 
     // DEPRECATED!!!
@@ -105,31 +106,24 @@ module.exports.register = function (context) {
       TheGraph.mixins.Tooltip
     ],
     componentDidMount: function () {
-      console.log('TheGraph.Node: componentDidMount', this.props)
       // patchGestures();
       var domNode = ReactDOM.findDOMNode(this);
 
       // Dragging
-      console.log('add Eventlisteners', "track", "tap", "contextmenu", "hold")
       domNode.addEventListener("track", this.trackHandler);
 
       // Tap to select
       if (this.props.onNodeSelection) {
         domNode.addEventListener("tap", this.onNodeSelection, true);
-      } else {
-        console.log('no onNodeSelection')
       }
 
       // Context menu
       if (this.props.showContext) {
         domNode.addEventListener("contextmenu", this.showContext);
         domNode.addEventListener("hold", this.showContext);
-      } else {
-        console.log('no showContext')
       }
     },
     onNodeSelection: function (event) {
-      console.log('Node: onNodeSelection', event)
       // Don't tap app (unselect)
       event.stopPropagation();
 
@@ -143,7 +137,6 @@ module.exports.register = function (context) {
       //  track — fired while tracking
       //  end — fired when tracking ends
 
-      console.log('Node: onTrackStart', event)
       // Don't drag graph
       event.stopPropagation();
 
@@ -170,7 +163,6 @@ module.exports.register = function (context) {
     trackHandler: function (event) {
       // Don't fire on graph
       event.stopPropagation();
-      console.log('track state', event.detail.state);
       switch (event.detail.state) {
         case 'start':
           this._onTrackStart(event);
@@ -189,13 +181,6 @@ module.exports.register = function (context) {
       var detail = event.detail
       var deltaX = Math.round(detail.ddx / scale);
       var deltaY = Math.round(detail.ddy / scale);
-      console.log('onTrack', {
-        detail,
-        deltaX,
-        deltaY
-      });
-
-      console.log('Node export:', this.props.export);
       var meta = this.props.node.metadata
       var x = meta.x
       var y = meta.y
@@ -206,25 +191,16 @@ module.exports.register = function (context) {
       }
 
       if (this.props.export) {
-        console.log('Node export redraw');
         if (this.props.isIn) {
           this.props.graph.setInportMetadata(this.props.exportKey, newPos);
         } else {
           this.props.graph.setOutportMetadata(this.props.exportKey, newPos);
         }
       } else {
-        console.log('Node redraw', {
-          old: {
-            x,
-            y,
-          },
-          newPos,
-        });
         this.props.graph.setNodeMetadata(this.props.nodeID, newPos);
       }
     },
     _onTrackEnd: function (event) {
-      console.log('Node: onTrackEnd', event)
       // Don't fire on graph
       event.stopPropagation();
 
@@ -391,7 +367,6 @@ module.exports.register = function (context) {
       );
     },
     render: function () {
-      console.log('Node: render')
       if (this.props.ports.dirty) {
         // This tag is set when an edge or iip changes port colors
         this.props.ports.dirty = false;

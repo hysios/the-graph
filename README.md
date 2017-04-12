@@ -472,34 +472,72 @@ Which calls `edgeStart` of the `Graph`
 and then the `Graph` will: *Complete edge if this is the second tap and ports are compatible*
 
 ```js
-  isValidEdgeConnection(event) {
-    let edgePreview = this.state.edgePreview
-    if (!edgePreview) return false;
-    return edgePreview.isIn !== event.detail.isIn
-  },
-
   edgeStart: function (event) {
     // Forwarded from App.edgeStart()
 
     // Port that triggered this
     var port = event.detail.port;
-
-    // Complete edge if this is the second tap and ports are compatible
-    if (this.isValidEdgeConnection(event)) {
-      // TODO also check compatible types
-      var halfEdge = this.state.edgePreview;
-      if (event.detail.isIn) {
-        halfEdge.to = port;
-      } else {
-        halfEdge.from = port;
+    let edgePreview = this.state.edgePreview
+    if (edgePreview) {
+      // Complete edge if this is the second tap and ports are compatible
+      var isCon = edgePreview.isIn === event.detail.isIn
+      if (isCon) {
+        // TODO also check compatible types
+        var halfEdge = this.state.edgePreview;
+        console.log('Half edge before', halfEdge)
+        if (event.detail.isIn) {
+          halfEdge.to = port;
+        } else {
+          halfEdge.from = port;
+        }
+        console.log('Half edge', halfEdge)
+        this.addEdge(halfEdge);
+        this.cancelPreviewEdge();
+        return;
       }
-      this.addEdge(halfEdge);
-      this.cancelPreviewEdge();
-      return;
-    }
 ```
 
-For some reason, `isIn` is false for both the `edgePreview` state and for the event (target). Need to fix this!!!
+For some reason the event port (such as `out-0` is the same as the event port, which should be the in port (such as `in-0`) of the node released on. Something goes wrong in the event handlers!
+
+This will make `halfEdge` only get half set (`from`), whereas in the original `the-graph` app both `to` and `from` are set.
+
+The root cause must be found in `triggerDropOnTarget`. Where
+
+```js
+  // If dropped on a child element will bubble up to port
+  if (!event.relatedTarget) {
+```
+
+Was changed to:
+
+```js
+  var target = event.relatedTarget || event.target
+```
+
+To make the target not `null`. Somehow we are not using the new event system correctly just yet and this has consequences!
+
+[MouseEvent API](https://developer.mozilla.org/en-US/docs/Web/API/MouseEvent/MouseEvent)
+
+```
+"relatedTarget", optional and defaulting to null, of type EventTarget,
+that is the element just left (in case of  a mouseenter or mouseover)
+or is entering (in case of a mouseout or mouseleave).
+```
+
+[Explained](http://stackoverflow.com/questions/31865416/what-is-the-difference-between-event-target-event-toelement-and-event-srcelemen) and [mouse events explained](https://www.quirksmode.org/js/events_mouse.html)
+
+IF no relatedTarget, it should bubble up! but doesn't work :()
+
+```
+  var target = event.relatedTarget
+  console.log('out on', target)
+  if (!target) {
+    // is child element, bubble up'
+    return;
+  }
+```
+
+Ask on Polymer Slack!!!
 
 ## Getting started
 
