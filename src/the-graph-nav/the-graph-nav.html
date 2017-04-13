@@ -220,7 +220,6 @@
       }
 
       viewrectangleChanged() {
-        console.log('viewrectangleChanged')
         // Canvas to grey out outside view
         var context = this.$.outcanvas.getContext('2d');
         context = unwrap(context);
@@ -236,7 +235,6 @@
           viewBoxBorder2: this.viewBoxBorder2,
           outsideFill: this.outsideFill,
         };
-        console.log('render nav', context, this.$.viewrect, properties)
         // debugger
         var nav = TheGraph.nav.render(context, this.$.viewrect, properties);
         this.hide = nav.hide;

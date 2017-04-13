@@ -116,39 +116,22 @@ module.exports.register = function (context) {
     edgePreview: null,
 
     edgeStart: function (event) {
-      console.log('Graph edgeStart', event);
       // Forwarded from App.edgeStart()
-
-      if (typeof event !== 'object') {
-        throw new Error('edgeStart: No event')
-      }
       // Port that triggered this
       var port = event.detail.port;
       let edgePreview = this.state.edgePreview
       if (edgePreview) {
-        console.log('edgePreview', edgePreview)
-        console.log('event', event)
         // Complete edge if this is the second tap and ports are compatible
         var isCon = edgePreview.isIn !== event.detail.isIn
         if (isCon) {
           // TODO also check compatible types
           var halfEdge = this.state.edgePreview;
-          console.log('ports', {
-            eventPort: port,
-            edgePort: edgePreview.port
-          })
-          console.log('Half edge before', halfEdge)
-
           if (event.detail.isIn) {
             halfEdge.to = port;
           } else {
             halfEdge.from = port;
           }
           // set missing to or from to port
-          // halfEdge.to = halfEdge.to || port
-          // halfEdge.from = halfEdge.from || port
-
-          console.log('Half edge', halfEdge)
           this.addEdge(halfEdge);
           this.cancelPreviewEdge();
           return;
@@ -156,8 +139,6 @@ module.exports.register = function (context) {
       }
 
       var edge;
-      console.log('edge to use for connect', edge)
-
       if (event.detail.isIn) {
         edge = {
           to: port
@@ -172,8 +153,6 @@ module.exports.register = function (context) {
         route: event.detail.route
       };
       edge.type = event.detail.port.type;
-      console.log('edge to connect with', edge)
-
       var appDomNode = ReactDOM.findDOMNode(this.props.app);
       appDomNode.addEventListener("mousemove", this.renderPreviewEdge);
       appDomNode.addEventListener("track", this.renderPreviewEdge);
@@ -213,25 +192,6 @@ module.exports.register = function (context) {
       var svgcontainer = appProps.svgcontainer || {};
       var offX = svgcontainer.offsetLeft
       var offY = svgcontainer.offsetTop
-
-      // http://stackoverflow.com/questions/442404/retrieve-the-position-x-y-of-an-html-element
-      // console.log('svgcontainer', {
-      //   offX,
-      //   offY,
-      // })
-      // console.log('coords + offsets', {
-      //   scale,
-      //   offX,
-      //   offY,
-      //   x,
-      //   y,
-      //   offsetX: state.offsetX,
-      //   offsetY: state.offsetY,
-      //   stateX: state.x,
-      //   stateY: state.y,
-      // });
-
-
       var edgePreviewX = ((x - state.x) / scale) - offX
       var edgePreviewY = ((y - state.y) / scale) - offY
 
@@ -248,14 +208,6 @@ module.exports.register = function (context) {
       this.markDirty();
     },
     addEdge: function (edge) {
-      console.log('Graph addEdge', edge);
-      if (!(edge.from && edge.to)) {
-        console.error('Half edge', {
-          from: edge.from,
-          to: edge.to
-        })
-        return
-      }
       this.state.graph.addEdge(edge.from.process, edge.from.port, edge.to.process, edge.to.port, edge.metadata);
     },
     moveGroup: function (nodes, dx, dy) {
@@ -374,7 +326,6 @@ module.exports.register = function (context) {
       return port;
     },
     resetPortRoute: function (event) {
-      console.log('resetPortRoute', event)
       // Trigger nodes with changed ports to rerender
       if (event.from && event.from.node) {
         var fromNode = this.portInfo[event.from.node];
@@ -467,33 +418,26 @@ module.exports.register = function (context) {
     dirty: false,
     libraryDirty: false,
     markDirty: function (event) {
-      // console.log('markDirty', event)
       if (event && event.libraryDirty) {
         this.libraryDirty = true;
       }
       window.requestAnimationFrame(this.triggerRender);
     },
     triggerRender: function (time) {
-      // console.log('triggerRender', time)
       if (!this.isMounted()) {
-        // console.log('not mounted')
         return;
       }
       if (this.dirty) {
-        // console.log('is dirty')
         return;
       }
       this.dirty = true;
-      // console.log('forceUpdate', this.dirty)
       this.forceUpdate();
     },
     shouldComponentUpdate: function () {
-      // console.log('shouldComponentUpdate', this.dirty)
       // If ports change or nodes move, then edges need to rerender, so we do the whole graph
       return this.dirty;
     },
     render: function () {
-      // console.log('Graph render');
       this.dirty = false;
 
       var self = this;
@@ -517,7 +461,6 @@ module.exports.register = function (context) {
       }
 
       // Nodes
-      // console.log('draw nodes')
       var nodes = graph.nodes.map(function (node) {
         var componentInfo = self.getComponentInfo(node.component);
         var key = node.id;
@@ -587,7 +530,6 @@ module.exports.register = function (context) {
       });
 
       // Edges
-      // console.log('draw edges')
       var edges = graph.edges.map(function (edge) {
         var source = graph.getNode(edge.from.node);
         var target = graph.getNode(edge.to.node);

@@ -75,7 +75,6 @@ module.exports.register = function (context) {
     displayName: "TheGraphApp",
     mixins: mixins,
     getInitialState: function () {
-      console.log('App: getInitialState')
       // Autofit
       var fit = TheGraph.findFit(this.props.graph, this.props.width, this.props.height);
 
@@ -207,15 +206,29 @@ module.exports.register = function (context) {
       // Hammer.js
       this.pinching = false;
     },
+    trackHandler: function (event) {
+      let detail = event.detail
+      let state = detail.state
+      switch (state) {
+        case 'start':
+          this.onTrackStart(event);
+          break;
+        case 'track':
+          this._onTrack(event);
+          break;
+        case 'end':
+          let hoverElem = detail.hover()
+          event.relatedTarget = hoverElem
+          this.onTrackEnd(event);
+          break;
+      }
+    },
+
     onTrackStart: function (event) {
-      console.log('App: onTrackStart', event)
       event.preventTap();
       var domNode = ReactDOM.findDOMNode(this);
-      domNode.addEventListener("track", this.onTrack);
-      domNode.addEventListener("trackend", this.onTrackEnd);
     },
     onTrack: function (event) {
-      console.log('App: onTrack', event)
       if (this.pinching) {
         return;
       }
@@ -225,13 +238,11 @@ module.exports.register = function (context) {
       });
     },
     onTrackEnd: function (event) {
-      console.log('App: onTrackEnd', event)
       // Don't click app (unselect)
       event.stopPropagation();
 
       var domNode = ReactDOM.findDOMNode(this);
-      domNode.removeEventListener("track", this.onTrack);
-      domNode.removeEventListener("trackend", this.onTrackEnd);
+      domNode.removeEventListener("track", this.trackHandler);
     },
     onPanScale: function () {
       // Pass pan/scale out to the-graph
@@ -282,7 +293,6 @@ module.exports.register = function (context) {
       });
     },
     focusNode: function (node) {
-      console.log('App: focusNode')
       var duration = TheGraph.config.focusAnimationDuration;
       var fit = TheGraph.findNodeFit(node, this.state.width, this.state.height);
       var start_point = {
@@ -323,20 +333,17 @@ module.exports.register = function (context) {
     },
     edgeStart: function (event) {
       // Listened from PortMenu.edgeStart() and Port.edgeStart()
-      console.log('App edgeStart', event)
       // calls TheGraph .edgeStart
       this.refs.graph.edgeStart(event);
       this.hideContext();
     },
     componentDidMount: function () {
       var domNode = ReactDOM.findDOMNode(this);
-      console.log('App: componentDidMount', domNode)
 
       // Set up PolymerGestures for app and all children
       var noop = function () {};
 
       let PolymerGestures = window.Polymer.Gestures
-      console.log('add Event/Gesture listeners', PolymerGestures)
 
       // See: https://www.polymer-project.org/2.0/docs/devguide/gesture-events
       //    Polymer.Gestures.addListener(this, 'tap', e => this.tapHandler(e));
@@ -344,9 +351,7 @@ module.exports.register = function (context) {
       PolymerGestures.addListener(domNode, "up", noop);
       PolymerGestures.addListener(domNode, "down", noop);
       PolymerGestures.addListener(domNode, "tap", noop);
-      PolymerGestures.addListener(domNode, "trackstart", noop);
       PolymerGestures.addListener(domNode, "track", noop);
-      PolymerGestures.addListener(domNode, "trackend", noop);
       PolymerGestures.addListener(domNode, "hold", noop);
 
       // Unselect edges and nodes
@@ -365,7 +370,7 @@ module.exports.register = function (context) {
       }
 
       // Pointer gesture event for pan
-      domNode.addEventListener("trackstart", this.onTrackStart);
+      domNode.addEventListener("track", this.onTrackStart);
 
       var isTouchDevice = 'ontouchstart' in document.documentElement;
       if (isTouchDevice && hammertime) {
@@ -507,19 +512,15 @@ module.exports.register = function (context) {
       this.props.onEdgeSelection();
     },
     renderGraph: function () {
-      console.log('App: renderGraph')
       this.refs.graph.markDirty();
     },
     componentDidUpdate: function (prevProps, prevState) {
-      console.log('App: componentDidUpdate')
       this.renderCanvas(this.bgContext);
       if (!prevState || prevState.x !== this.state.x || prevState.y !== this.state.y || prevState.scale !== this.state.scale) {
         this.onPanScale();
       }
     },
     renderCanvas: function (c) {
-      console.log('renderCanvas', c)
-
       // Comment this line to go plaid
       c.clearRect(0, 0, this.state.width, this.state.height);
 
@@ -555,7 +556,6 @@ module.exports.register = function (context) {
     },
 
     getContext: function (menu, options, hide) {
-      console.log('App: getContext')
       return TheGraph.Menu({
         menu: menu,
         options: options,
@@ -576,10 +576,6 @@ module.exports.register = function (context) {
       });
     },
     render: function () {
-      console.log('App: render')
-      // console.timeEnd("App.render");
-      // console.time("App.render");
-
       // pan and zoom
       var sc = this.state.scale;
       var x = this.state.x;
@@ -596,8 +592,6 @@ module.exports.register = function (context) {
           if (menu) {
             contextMenu = options.element.getContext(menu, options, this.hideContext);
           }
-        } else {
-          console.log('no getMenuDef on props', props)
         }
       }
       if (contextMenu) {

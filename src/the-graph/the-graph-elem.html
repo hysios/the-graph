@@ -234,7 +234,6 @@
           offsetY: this.offsetY,
           offsetX: this.offsetX
         }
-        console.log('app', app)
         if (!graph) {
           // throw new Error('no graph to render in app')
           console.error('no graph to render in app')
@@ -350,7 +349,6 @@
 
         var selectedEdgesEvent = this._buildEvent('edges', this.selectedEdges)
         // https://dom.spec.whatwg.org/#interface-customevent
-        console.log('selectedEdgesChanged - distach event: nodes', this.selectedEdges)
         this.dispatchEvent(selectedEdgesEvent);
       }
 
@@ -363,7 +361,6 @@
 
       // Graph changed event
       fireChanged(event) {
-        this.log('Graph changed event', event)
         var changedEvent = new CustomEvent('changed', {
           bubbles: true
         })
@@ -371,9 +368,7 @@
       }
 
       _autolayoutChanged(layout, oldLayout) {
-        console.log('autolayout changed', layout, oldLayout)
         if (!this.graph) {
-          console.log('no graph to autolayout')
           return;
         }
         // Only listen to changes that affect layout

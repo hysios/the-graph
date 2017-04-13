@@ -15,17 +15,14 @@ function calculateStyleFromTheme(theme) {
 }
 
 function scaledPos(props, index) {
-  console.log('scaledPos', props)
   return (props.viewrectangle[index] / props.scale - props.thumbrectangle[index]) * props.thumbscale
 }
 
 function scaledSize(props, index) {
-  console.log('scaledSize', props)
   return props.viewrectangle[index] * props.thumbscale / props.scale
 }
 
 function renderViewRectangle(context, viewrect, props) {
-  console.log('renderViewRectangle', context, viewrect, props)
   context.clearRect(0, 0, props.width, props.height);
   context.fillStyle = props.outsideFill;
 

@@ -148,10 +148,6 @@ module.exports.register = function (context) {
       });
     },
     shouldComponentUpdate: function (nextProps, nextState) {
-      // console.log('Edge shouldComponentUpdate', {
-      //   nextProps,
-      //   props: this.props
-      // })
       // Only rerender if changed
       return (
         nextProps.sX !== this.props.sX ||
@@ -174,13 +170,6 @@ module.exports.register = function (context) {
       var sourceY = this.props.sY;
       var targetX = this.props.tX;
       var targetY = this.props.tY;
-
-      console.log('Edge render', {
-        sourceX,
-        sourceY,
-        targetX,
-        targetY
-      });
 
       // Organic / curved edge
       var c1X, c1Y, c2X, c2Y;

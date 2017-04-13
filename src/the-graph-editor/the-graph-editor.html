@@ -103,7 +103,7 @@
       // }
 
       log(...args) {
-        console.log('the-graph-EDITOR', ...args)
+        console.log('the-graph-editor', ...args)
       }
 
       // ready() {
@@ -204,10 +204,8 @@
         }
 
         fbpGraph.graph.loadJSON(graph, (err, graph) => {
-          console.log('graph loadJSON', graph)
           this.buildInitialLibrary(graph);
           this.fbpGraph = graph;
-          console.log('dispatch graphInitialised')
           var event = new CustomEvent('graphInitialised', {
             bubbles: true
           })
@@ -224,14 +222,12 @@
         //   return;
         // }
         var components = TheGraph.library.componentsFromGraph(fbpGraph);
-        console.log('Graph Components', components)
         components.forEach(function (component) {
           this.registerComponent(component, true);
         }.bind(this));
       }
 
       registerComponent(definition, generated) {
-        console.log('graph registerComponent', definition)
         this.$.graph.registerComponent(definition, generated);
       }
 

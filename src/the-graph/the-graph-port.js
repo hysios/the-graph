@@ -55,7 +55,6 @@ module.exports.register = function (context) {
       // Don't fire on graph
       event.stopPropagation();
       let detail = event.detail
-      console.log('track state', detail.state);
       switch (detail.state) {
         case 'start':
           this.edgeStart(event);
@@ -65,7 +64,6 @@ module.exports.register = function (context) {
           break;
         case 'end':
           let hoverElem = detail.hover()
-          console.log('hover on', hoverElem)
           event.relatedTarget = hoverElem
           this.triggerDropOnTarget(event);
           break;
@@ -123,16 +121,13 @@ module.exports.register = function (context) {
       });
     },
     edgeStart: function (event) {
-      console.log('port edgeStart', event)
       // Don't start edge on export node port
       if (this.props.isExport) {
-        console.log('was export node port');
         return;
       }
 
       // Click on label, pass context menu to node
       if (event && (event.target === ReactDOM.findDOMNode(this.refs.label))) {
-        console.log('was on label');
         return;
       }
       // Don't tap graph
@@ -147,17 +142,9 @@ module.exports.register = function (context) {
         bubbles: true
       });
       let node = ReactDOM.findDOMNode(this)
-      console.log('PORT', this.props.port.port)
-      console.log('edgeStart: dispatch the-graph-edge-start', {
-        event: edgeStartEvent,
-        props: this.props
-      })
       node.dispatchEvent(edgeStartEvent);
     },
     triggerDropOnTarget: function (event) {
-      console.log('triggerDropOnTarget', event)
-      console.log('detail', event.detail)
-      console.log('sourceEvent', event.detail.sourceEvent)
       let sourceEvent = event.detail.sourceEvent
 
       // throw new Error('fuck')
@@ -167,11 +154,7 @@ module.exports.register = function (context) {
       // that is the element just left (in case of  a mouseenter or mouseover)
       // or is entering (in case of a mouseout or mouseleave).
       var target = event.relatedTarget // || sourceEvent.toElement || sourceEvent.fromElement
-      console.log('out on', target)
       if (!target) {
-        console.log('is child element, bubble up', {
-          target: target
-        })
         return;
       }
       var dropEvent = new CustomEvent('the-graph-edge-drop', {
@@ -179,7 +162,6 @@ module.exports.register = function (context) {
         bubbles: true
       });
       let targetNode = target
-      console.log('triggerDropOnTarget: dispatch edge drop event', dropEvent, targetNode)
       targetNode.dispatchEvent(dropEvent);
     },
     render: function () {
@@ -213,7 +195,7 @@ module.exports.register = function (context) {
 
       var innerCircleOptions = {
         className: "port-circle-small fill route" + this.props.route,
-        r: r - 1.5
+        r: r // - 0.5
       };
 
       innerCircleOptions = TheGraph.merge(TheGraph.config.port.innerCircle, innerCircleOptions);

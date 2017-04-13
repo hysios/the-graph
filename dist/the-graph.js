@@ -9817,17 +9817,14 @@ function calculateStyleFromTheme(theme) {
 }
 
 function scaledPos(props, index) {
-  console.log('scaledPos', props)
   return (props.viewrectangle[index] / props.scale - props.thumbrectangle[index]) * props.thumbscale
 }
 
 function scaledSize(props, index) {
-  console.log('scaledSize', props)
   return props.viewrectangle[index] * props.thumbscale / props.scale
 }
 
 function renderViewRectangle(context, viewrect, props) {
-  console.log('renderViewRectangle', context, viewrect, props)
   context.clearRect(0, 0, props.width, props.height);
   context.fillStyle = props.outsideFill;
 
@@ -10998,7 +10995,6 @@ module.exports.register = function (context) {
     displayName: "TheGraphApp",
     mixins: mixins,
     getInitialState: function () {
-      console.log('App: getInitialState')
       // Autofit
       var fit = TheGraph.findFit(this.props.graph, this.props.width, this.props.height);
 
@@ -11130,15 +11126,29 @@ module.exports.register = function (context) {
       // Hammer.js
       this.pinching = false;
     },
+    trackHandler: function (event) {
+      let detail = event.detail
+      let state = detail.state
+      switch (state) {
+        case 'start':
+          this.onTrackStart(event);
+          break;
+        case 'track':
+          this._onTrack(event);
+          break;
+        case 'end':
+          let hoverElem = detail.hover()
+          event.relatedTarget = hoverElem
+          this.onTrackEnd(event);
+          break;
+      }
+    },
+
     onTrackStart: function (event) {
-      console.log('App: onTrackStart', event)
       event.preventTap();
       var domNode = ReactDOM.findDOMNode(this);
-      domNode.addEventListener("track", this.onTrack);
-      domNode.addEventListener("trackend", this.onTrackEnd);
     },
     onTrack: function (event) {
-      console.log('App: onTrack', event)
       if (this.pinching) {
         return;
       }
@@ -11148,13 +11158,11 @@ module.exports.register = function (context) {
       });
     },
     onTrackEnd: function (event) {
-      console.log('App: onTrackEnd', event)
       // Don't click app (unselect)
       event.stopPropagation();
 
       var domNode = ReactDOM.findDOMNode(this);
-      domNode.removeEventListener("track", this.onTrack);
-      domNode.removeEventListener("trackend", this.onTrackEnd);
+      domNode.removeEventListener("track", this.trackHandler);
     },
     onPanScale: function () {
       // Pass pan/scale out to the-graph
@@ -11205,7 +11213,6 @@ module.exports.register = function (context) {
       });
     },
     focusNode: function (node) {
-      console.log('App: focusNode')
       var duration = TheGraph.config.focusAnimationDuration;
       var fit = TheGraph.findNodeFit(node, this.state.width, this.state.height);
       var start_point = {
@@ -11246,20 +11253,17 @@ module.exports.register = function (context) {
     },
     edgeStart: function (event) {
       // Listened from PortMenu.edgeStart() and Port.edgeStart()
-      console.log('App edgeStart', event)
       // calls TheGraph .edgeStart
       this.refs.graph.edgeStart(event);
       this.hideContext();
     },
     componentDidMount: function () {
       var domNode = ReactDOM.findDOMNode(this);
-      console.log('App: componentDidMount', domNode)
 
       // Set up PolymerGestures for app and all children
       var noop = function () {};
 
       let PolymerGestures = window.Polymer.Gestures
-      console.log('add Event/Gesture listeners', PolymerGestures)
 
       // See: https://www.polymer-project.org/2.0/docs/devguide/gesture-events
       //    Polymer.Gestures.addListener(this, 'tap', e => this.tapHandler(e));
@@ -11267,9 +11271,7 @@ module.exports.register = function (context) {
       PolymerGestures.addListener(domNode, "up", noop);
       PolymerGestures.addListener(domNode, "down", noop);
       PolymerGestures.addListener(domNode, "tap", noop);
-      PolymerGestures.addListener(domNode, "trackstart", noop);
       PolymerGestures.addListener(domNode, "track", noop);
-      PolymerGestures.addListener(domNode, "trackend", noop);
       PolymerGestures.addListener(domNode, "hold", noop);
 
       // Unselect edges and nodes
@@ -11288,7 +11290,7 @@ module.exports.register = function (context) {
       }
 
       // Pointer gesture event for pan
-      domNode.addEventListener("trackstart", this.onTrackStart);
+      domNode.addEventListener("track", this.onTrackStart);
 
       var isTouchDevice = 'ontouchstart' in document.documentElement;
       if (isTouchDevice && hammertime) {
@@ -11430,19 +11432,15 @@ module.exports.register = function (context) {
       this.props.onEdgeSelection();
     },
     renderGraph: function () {
-      console.log('App: renderGraph')
       this.refs.graph.markDirty();
     },
     componentDidUpdate: function (prevProps, prevState) {
-      console.log('App: componentDidUpdate')
       this.renderCanvas(this.bgContext);
       if (!prevState || prevState.x !== this.state.x || prevState.y !== this.state.y || prevState.scale !== this.state.scale) {
         this.onPanScale();
       }
     },
     renderCanvas: function (c) {
-      console.log('renderCanvas', c)
-
       // Comment this line to go plaid
       c.clearRect(0, 0, this.state.width, this.state.height);
 
@@ -11478,7 +11476,6 @@ module.exports.register = function (context) {
     },
 
     getContext: function (menu, options, hide) {
-      console.log('App: getContext')
       return TheGraph.Menu({
         menu: menu,
         options: options,
@@ -11499,10 +11496,6 @@ module.exports.register = function (context) {
       });
     },
     render: function () {
-      console.log('App: render')
-      // console.timeEnd("App.render");
-      // console.time("App.render");
-
       // pan and zoom
       var sc = this.state.scale;
       var x = this.state.x;
@@ -11519,8 +11512,6 @@ module.exports.register = function (context) {
           if (menu) {
             contextMenu = options.element.getContext(menu, options, this.hideContext);
           }
-        } else {
-          console.log('no getMenuDef on props', props)
         }
       }
       if (contextMenu) {
@@ -11899,10 +11890,6 @@ module.exports.register = function (context) {
       });
     },
     shouldComponentUpdate: function (nextProps, nextState) {
-      // console.log('Edge shouldComponentUpdate', {
-      //   nextProps,
-      //   props: this.props
-      // })
       // Only rerender if changed
       return (
         nextProps.sX !== this.props.sX ||
@@ -11925,13 +11912,6 @@ module.exports.register = function (context) {
       var sourceY = this.props.sY;
       var targetX = this.props.tX;
       var targetY = this.props.tY;
-
-      console.log('Edge render', {
-        sourceX,
-        sourceY,
-        targetX,
-        targetY
-      });
 
       // Organic / curved edge
       var c1X, c1Y, c2X, c2Y;
@@ -12174,39 +12154,22 @@ module.exports.register = function (context) {
     edgePreview: null,
 
     edgeStart: function (event) {
-      console.log('Graph edgeStart', event);
       // Forwarded from App.edgeStart()
-
-      if (typeof event !== 'object') {
-        throw new Error('edgeStart: No event')
-      }
       // Port that triggered this
       var port = event.detail.port;
       let edgePreview = this.state.edgePreview
       if (edgePreview) {
-        console.log('edgePreview', edgePreview)
-        console.log('event', event)
         // Complete edge if this is the second tap and ports are compatible
         var isCon = edgePreview.isIn !== event.detail.isIn
         if (isCon) {
           // TODO also check compatible types
           var halfEdge = this.state.edgePreview;
-          console.log('ports', {
-            eventPort: port,
-            edgePort: edgePreview.port
-          })
-          console.log('Half edge before', halfEdge)
-
           if (event.detail.isIn) {
             halfEdge.to = port;
           } else {
             halfEdge.from = port;
           }
           // set missing to or from to port
-          // halfEdge.to = halfEdge.to || port
-          // halfEdge.from = halfEdge.from || port
-
-          console.log('Half edge', halfEdge)
           this.addEdge(halfEdge);
           this.cancelPreviewEdge();
           return;
@@ -12214,8 +12177,6 @@ module.exports.register = function (context) {
       }
 
       var edge;
-      console.log('edge to use for connect', edge)
-
       if (event.detail.isIn) {
         edge = {
           to: port
@@ -12230,8 +12191,6 @@ module.exports.register = function (context) {
         route: event.detail.route
       };
       edge.type = event.detail.port.type;
-      console.log('edge to connect with', edge)
-
       var appDomNode = ReactDOM.findDOMNode(this.props.app);
       appDomNode.addEventListener("mousemove", this.renderPreviewEdge);
       appDomNode.addEventListener("track", this.renderPreviewEdge);
@@ -12271,25 +12230,6 @@ module.exports.register = function (context) {
       var svgcontainer = appProps.svgcontainer || {};
       var offX = svgcontainer.offsetLeft
       var offY = svgcontainer.offsetTop
-
-      // http://stackoverflow.com/questions/442404/retrieve-the-position-x-y-of-an-html-element
-      // console.log('svgcontainer', {
-      //   offX,
-      //   offY,
-      // })
-      // console.log('coords + offsets', {
-      //   scale,
-      //   offX,
-      //   offY,
-      //   x,
-      //   y,
-      //   offsetX: state.offsetX,
-      //   offsetY: state.offsetY,
-      //   stateX: state.x,
-      //   stateY: state.y,
-      // });
-
-
       var edgePreviewX = ((x - state.x) / scale) - offX
       var edgePreviewY = ((y - state.y) / scale) - offY
 
@@ -12306,14 +12246,6 @@ module.exports.register = function (context) {
       this.markDirty();
     },
     addEdge: function (edge) {
-      console.log('Graph addEdge', edge);
-      if (!(edge.from && edge.to)) {
-        console.error('Half edge', {
-          from: edge.from,
-          to: edge.to
-        })
-        return
-      }
       this.state.graph.addEdge(edge.from.process, edge.from.port, edge.to.process, edge.to.port, edge.metadata);
     },
     moveGroup: function (nodes, dx, dy) {
@@ -12432,7 +12364,6 @@ module.exports.register = function (context) {
       return port;
     },
     resetPortRoute: function (event) {
-      console.log('resetPortRoute', event)
       // Trigger nodes with changed ports to rerender
       if (event.from && event.from.node) {
         var fromNode = this.portInfo[event.from.node];
@@ -12525,33 +12456,26 @@ module.exports.register = function (context) {
     dirty: false,
     libraryDirty: false,
     markDirty: function (event) {
-      // console.log('markDirty', event)
       if (event && event.libraryDirty) {
         this.libraryDirty = true;
       }
       window.requestAnimationFrame(this.triggerRender);
     },
     triggerRender: function (time) {
-      // console.log('triggerRender', time)
       if (!this.isMounted()) {
-        // console.log('not mounted')
         return;
       }
       if (this.dirty) {
-        // console.log('is dirty')
         return;
       }
       this.dirty = true;
-      // console.log('forceUpdate', this.dirty)
       this.forceUpdate();
     },
     shouldComponentUpdate: function () {
-      // console.log('shouldComponentUpdate', this.dirty)
       // If ports change or nodes move, then edges need to rerender, so we do the whole graph
       return this.dirty;
     },
     render: function () {
-      // console.log('Graph render');
       this.dirty = false;
 
       var self = this;
@@ -12575,7 +12499,6 @@ module.exports.register = function (context) {
       }
 
       // Nodes
-      // console.log('draw nodes')
       var nodes = graph.nodes.map(function (node) {
         var componentInfo = self.getComponentInfo(node.component);
         var key = node.id;
@@ -12645,7 +12568,6 @@ module.exports.register = function (context) {
       });
 
       // Edges
-      // console.log('draw edges')
       var edges = graph.edges.map(function (edge) {
         var source = graph.getNode(edge.from.node);
         var target = graph.getNode(edge.to.node);
@@ -14702,7 +14624,6 @@ module.exports.register = function (context) {
       // Don't fire on graph
       event.stopPropagation();
       let detail = event.detail
-      console.log('track state', detail.state);
       switch (detail.state) {
         case 'start':
           this.edgeStart(event);
@@ -14712,7 +14633,6 @@ module.exports.register = function (context) {
           break;
         case 'end':
           let hoverElem = detail.hover()
-          console.log('hover on', hoverElem)
           event.relatedTarget = hoverElem
           this.triggerDropOnTarget(event);
           break;
@@ -14770,16 +14690,13 @@ module.exports.register = function (context) {
       });
     },
     edgeStart: function (event) {
-      console.log('port edgeStart', event)
       // Don't start edge on export node port
       if (this.props.isExport) {
-        console.log('was export node port');
         return;
       }
 
       // Click on label, pass context menu to node
       if (event && (event.target === ReactDOM.findDOMNode(this.refs.label))) {
-        console.log('was on label');
         return;
       }
       // Don't tap graph
@@ -14794,17 +14711,9 @@ module.exports.register = function (context) {
         bubbles: true
       });
       let node = ReactDOM.findDOMNode(this)
-      console.log('PORT', this.props.port.port)
-      console.log('edgeStart: dispatch the-graph-edge-start', {
-        event: edgeStartEvent,
-        props: this.props
-      })
       node.dispatchEvent(edgeStartEvent);
     },
     triggerDropOnTarget: function (event) {
-      console.log('triggerDropOnTarget', event)
-      console.log('detail', event.detail)
-      console.log('sourceEvent', event.detail.sourceEvent)
       let sourceEvent = event.detail.sourceEvent
 
       // throw new Error('fuck')
@@ -14814,11 +14723,7 @@ module.exports.register = function (context) {
       // that is the element just left (in case of  a mouseenter or mouseover)
       // or is entering (in case of a mouseout or mouseleave).
       var target = event.relatedTarget // || sourceEvent.toElement || sourceEvent.fromElement
-      console.log('out on', target)
       if (!target) {
-        console.log('is child element, bubble up', {
-          target: target
-        })
         return;
       }
       var dropEvent = new CustomEvent('the-graph-edge-drop', {
@@ -14826,7 +14731,6 @@ module.exports.register = function (context) {
         bubbles: true
       });
       let targetNode = target
-      console.log('triggerDropOnTarget: dispatch edge drop event', dropEvent, targetNode)
       targetNode.dispatchEvent(dropEvent);
     },
     render: function () {
@@ -14860,7 +14764,7 @@ module.exports.register = function (context) {
 
       var innerCircleOptions = {
         className: "port-circle-small fill route" + this.props.route,
-        r: r - 1.5
+        r: r // - 0.5
       };
 
       innerCircleOptions = TheGraph.merge(TheGraph.config.port.innerCircle, innerCircleOptions);
