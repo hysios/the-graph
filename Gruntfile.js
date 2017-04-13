@@ -62,25 +62,6 @@
           }
         }
       },
-      jshint: {
-        options: {
-          extract: 'auto',
-          strict: false,
-          newcap: false,
-          "globals": {
-            "Polymer": true
-          }
-        },
-        all: {
-          src: sources.scripts
-        },
-        force: {
-          src: sources.scripts,
-          options: {
-            force: true
-          }
-        }
-      },
       connect: {
         server: {
           options: {
@@ -148,7 +129,7 @@
 
     this.registerTask('dev', ['test', 'watch']);
     this.registerTask('build', ['bower-install-simple', 'exec:build_stylus', 'exec:build_fa', 'browserify:libs']);
-    this.registerTask('test', ['jshint:all', 'build', 'coffee', 'connect:server']);
+    this.registerTask('test', ['build', 'coffee', 'connect:server']);
     this.registerTask('crossbrowser', ['test', 'saucelabs-mocha']);
     this.registerTask('default', ['test']);
   };
