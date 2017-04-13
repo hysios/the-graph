@@ -1,6 +1,24 @@
 {
-  "name": "polymer-starter-kit",
-  "license": "BSD-3-Clause",
+  "name": "graph-polymer2",
+  "version": "0.1.0",
+  "license": "MIT",
+  "scripts": {
+    "lint": "eslint . --ext js,html --ignore-path .gitignore",
+    "test": "npm run lint && polymer test",
+    "start": "grunt dev",
+    "test:all": "grunt test",
+    "build": "grunt build",
+    "postinstall": "bower install",
+    "preversion": "grunt test",
+    "postversion": "git push && git push --tags",
+
+    "g:test": "ava",
+    "g:watch": "gulp watch",
+    "g:watchb": "gulp watch:b",
+    "g:start": "gulp start",
+    "g:build": "gulp build"
+  },
+
   "dependencies": {
     "create-react-class": "^15.5.2",
     "fbp-graph": "^0.1.0",
@@ -13,7 +31,6 @@
     "tv4": "^1.3.0"
   },
   "devDependencies": {
-    "babel-plugin-transform-class-properties": "^6.24.1",
     "chai": "^3.5.0",
     "coffee-script": "^1.12.2",
     "coffeeify": "^2.0.1",
@@ -31,16 +48,25 @@
     "grunt-exec": "~1.0.1",
     "grunt-saucelabs": "^9.0.0",
     "mocha": "^3.2.0",
-    "stylus": "~0.54.5"
+    "stylus": "~0.54.5",
+    "ava": "^0.18.2",
+    "babel-cli": "^6.24.0",
+    "babel-plugin-transform-runtime": "^6.23.0",
+    "babel-plugin-transform-class-properties": "^6.24.1",
+    "babel-preset-env": "^1.3.1",
+    "gulp": "^3.9.1",
+    "gulp-babel": "^6.1.2",
+    "gulp-livereload": "^3.8.1",
+    "gulp-sourcemaps": "^2.4.0"
   },
-  "scripts": {
-    "lint": "eslint . --ext js,html --ignore-path .gitignore",
-    "test": "npm run lint && polymer test",
-    "start": "grunt dev",
-    "test:all": "grunt test",
-    "build": "grunt build",
-    "postinstall": "bower install",
-    "preversion": "grunt test",
-    "postversion": "git push && git push --tags"
+  "ava": {
+    "source": [
+      "src/**/*.{js}"
+    ],
+    "modules": false,
+    "require": [
+      "babel-register"
+    ],
+    "babel": "inherit"
   }
 }

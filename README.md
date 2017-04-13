@@ -73,6 +73,36 @@ export default IntervalEnhance(CartItem);
 
 I think the problem is due to the ancient compilation mechanism in place, using Grunt and browserify. We first need to upgrade this to use latest Babel!!!
 
+## Gulp and Babel
+
+Trying to set up a Gulp/Babel build pipeline for now...
+NPM Scripts:
+
+```js
+  "g:test": "ava",
+  "g:watch": "gulp watch",
+  "g:watchb": "gulp watch:b",
+  "g:start": "gulp start",
+  "g:build": "gulp build"
+```
+
+There is a `gulpfile.js` and a `.babelrc`
+
+```js
+{
+  "presets": [
+    "env"
+  ],
+  "plugins": [
+    "transform-runtime"
+  ]
+}
+```
+
+For some reason, running `npm run g:build`, just seems to stall...
+
+Next we should configure and use Webpack 2 ;)
+
 ## Getting started
 
 First read these articles!!
