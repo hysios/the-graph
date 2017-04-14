@@ -2,7 +2,6 @@ const reactMixin = require('react-mixin');
 const Component = require('react').Component
 
 module.exports = class GraphMenu extends Component {
-  // static displayName = 'TheGraphNode';
   get displayName() {
     return 'TheGraphMenu'
   }

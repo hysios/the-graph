@@ -1,18 +1,30 @@
-module.exports = React.createClass({
-  displayName: "TheGraphNodeMenu",
-  radius: 72,
-  stopPropagation: function (event) {
+const reactMixin = require('react-mixin');
+const Component = require('react').Component
+
+module.exports = class GraphNodeMenu extends Component {
+  get displayName() {
+    return 'TheGraphNodeMenu'
+  }
+
+  get radius() {
+    return 72
+  }
+
+  stopPropagation(event) {
     // Don't drag graph
     event.stopPropagation();
-  },
-  componentDidMount: function () {
+  }
+
+  componentDidMount() {
     // Prevent context menu
-    ReactDOM.findDOMNode(this).addEventListener("contextmenu", function (event) {
+    var node = ReactDOM.findDOMNode(this)
+    node.addEventListener("contextmenu", function (event) {
       event.stopPropagation();
       event.preventDefault();
     }, false);
-  },
-  render: function () {
+  }
+
+  render() {
     var scale = this.props.node.props.app.state.scale;
     var ports = this.props.ports;
     var deltaX = this.props.deltaX;
@@ -71,4 +83,4 @@ module.exports = React.createClass({
     return TheGraph.factories.nodeMenu.createNodeMenuGroup.call(this, containerOptions);
 
   }
-})
+}

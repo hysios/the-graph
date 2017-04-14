@@ -10,7 +10,6 @@ class GraphPort extends Component {
     node.addEventListener(event, handler.bind(this), ...args);
   }
 
-
   componentDidMount() {
     let node = ReactDOM.findDOMNode(this);
     // Preview edge start
