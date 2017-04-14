@@ -44,9 +44,28 @@ Extracted `GraphNode` into `components/graph-node.js` that encapsulates componen
 
 ### React ES6 classes
 
-Trying to convert `GraphNode` to an ES6 class. It has a `ToolTip` mixin.
-I have this [mixin issue](https://github.com/brigand/react-mixin/issues/50).
-Please assist. I'm not a React mixin expert really...
+Now using `GraphNode` as an ES6 class (see `components/graph-node-class.js`).
+
+The `GraphNode` has a `ToolTip` mixin which is mixed in using [react-mixin](https://github.com/kristianmandrup/react-mixin#autobind-examples)
+
+```js
+const Component = require('react').Component
+
+class GraphNode extends Component {
+  // Note: requires babel (fx via Webpack 2 and babel-loader, see below)
+  // static displayName = 'TheGraphNode';
+  get displayName() {
+    return 'TheGraphNode'
+  }
+  // ...
+}
+var ToolTipMixin = require('../mixins/tooltip')
+reactMixin.bindClass(GraphNode, ToolTipMixin)
+
+module.exports = GraphNode
+```
+
+You can use a similar approach for all the other Graph components ;)
 
 ### Higher order components
 
@@ -71,7 +90,7 @@ class CartItem extends React.Component {
 export default IntervalEnhance(CartItem);
 ```
 
-I think the problem is due to the ancient compilation mechanism in place, using Grunt and browserify. We first need to upgrade this to use latest Babel!!!
+Using Higher-Order components should be possible by compiling using Babel as described next.
 
 ## Babel config
 

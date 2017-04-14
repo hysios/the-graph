@@ -497,10 +497,7 @@ function buildLabelRectOptions(height, x, y, len, className) {
   return result;
 }
 
-// var ToolTipMixin = require('../mixins/tooltip')
-// reactMixin(GraphNode.prototype, ToolTipMixin);
-// reactMixin.onClass(GraphNode, ToolTipMixin);
+var ToolTipMixin = require('../mixins/tooltip')
+reactMixin.bindClass(GraphNode, ToolTipMixin)
 
-const ToolTipMixin = require('./enhance/tooltip')
-
-module.exports = ToolTipMixin(GraphNode)
+module.exports = GraphNode

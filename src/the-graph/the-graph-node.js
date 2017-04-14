@@ -98,8 +98,8 @@ module.exports.register = function (context) {
     // });
   }
 
-  const GraphNode = require('./components/graph-node')
-  // const GraphNode = require('./components/graph-node-class')
+  // const GraphNode = require('./components/graph-node')
+  const GraphNode = require('./components/graph-node-class')
 
   // Node view
   TheGraph.Node = React.createFactory(GraphNode);
