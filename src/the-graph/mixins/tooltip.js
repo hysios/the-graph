@@ -22,7 +22,8 @@ module.exports = {
     var tooltipEvent = new CustomEvent('the-graph-tooltip-hide', {
       bubbles: true
     });
-    if (this.isMounted()) {
+    // NOTE: https://facebook.github.io/react/blog/2015/12/16/ismounted-antipattern.html
+    if (this.isMounted && this.isMounted()) {
       ReactDOM.findDOMNode(this).dispatchEvent(tooltipEvent);
     }
   },

@@ -38,6 +38,12 @@ Check browser console output.
 
 ## React
 
+### isMounted
+
+`ToolTipMixin` uses `isMounted` which is [deprecated and is an anti-pattern](https://facebook.github.io/react/blog/2015/12/16/ismounted-antipattern.html)
+
+_An easy migration strategy for anyone upgrading their code to avoid isMounted() is to track the mounted status yourself. Just set a `_isMounted` property to `true` in `componentDidMount` and set it to `false` in `componentWillUnmount`, and use this variable to check your component's status._
+
 ### Components
 
 Extracted `GraphNode` into `components/graph-node.js` that encapsulates component using `React.createClass`

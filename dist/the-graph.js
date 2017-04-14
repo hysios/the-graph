@@ -13597,7 +13597,7 @@ console.log('DONE CONFIGURE')
 console.log('TheGraph', g.TheGraph)
 
 module.exports = g.TheGraph;
-},{"./the-graph-editor/the-graph-editor.js":51,"./the-graph-nav/the-graph-nav.js":52,"./the-graph-thumb/the-graph-thumb.js":53,"./the-graph/font-awesome-unicode-map.js":55,"./the-graph/the-graph-app.js":57,"./the-graph/the-graph-autolayout.js":58,"./the-graph/the-graph-clipboard.js":59,"./the-graph/the-graph-edge.js":60,"./the-graph/the-graph-graph.js":61,"./the-graph/the-graph-group.js":62,"./the-graph/the-graph-iip.js":63,"./the-graph/the-graph-library.js":64,"./the-graph/the-graph-menu.js":65,"./the-graph/the-graph-node-menu-port.js":66,"./the-graph/the-graph-node-menu-ports.js":67,"./the-graph/the-graph-node-menu.js":68,"./the-graph/the-graph-node.js":69,"./the-graph/the-graph-port.js":70,"./the-graph/the-graph-tooltip.js":71,"./the-graph/the-graph.js":72,"fbp-graph":9}],51:[function(require,module,exports){
+},{"./the-graph-editor/the-graph-editor.js":51,"./the-graph-nav/the-graph-nav.js":52,"./the-graph-thumb/the-graph-thumb.js":53,"./the-graph/font-awesome-unicode-map.js":71,"./the-graph/the-graph-app.js":74,"./the-graph/the-graph-autolayout.js":75,"./the-graph/the-graph-clipboard.js":76,"./the-graph/the-graph-edge.js":77,"./the-graph/the-graph-graph.js":78,"./the-graph/the-graph-group.js":79,"./the-graph/the-graph-iip.js":80,"./the-graph/the-graph-library.js":81,"./the-graph/the-graph-menu.js":82,"./the-graph/the-graph-node-menu-port.js":83,"./the-graph/the-graph-node-menu-ports.js":84,"./the-graph/the-graph-node-menu.js":85,"./the-graph/the-graph-node.js":86,"./the-graph/the-graph-port.js":87,"./the-graph/the-graph-tooltip.js":88,"./the-graph/the-graph.js":89,"fbp-graph":9}],51:[function(require,module,exports){
 
 // Returns a new datastructure to prevent accidental sharing between diffent editor instances
 function getDefaultMenus(editor) {
@@ -14097,7 +14097,490 @@ module.exports = {
 
 },{}],54:[function(require,module,exports){
 const reactMixin = require('react-mixin');
+const Component = require('react').Component
 
+module.exports = TheGraph => {
+  // Const
+  var CURVE = TheGraph.config.edge.curve;
+
+  // Point along cubic bezier curve
+  // See http://en.wikipedia.org/wiki/File:Bezier_3_big.gif
+  var findPointOnCubicBezier = function (p, sx, sy, c1x, c1y, c2x, c2y, ex, ey) {
+    // p is percentage from 0 to 1
+    var op = 1 - p;
+    // 3 green points between 4 points that define curve
+    var g1x = sx * p + c1x * op;
+    var g1y = sy * p + c1y * op;
+    var g2x = c1x * p + c2x * op;
+    var g2y = c1y * p + c2y * op;
+    var g3x = c2x * p + ex * op;
+    var g3y = c2y * p + ey * op;
+    // 2 blue points between green points
+    var b1x = g1x * p + g2x * op;
+    var b1y = g1y * p + g2y * op;
+    var b2x = g2x * p + g3x * op;
+    var b2y = g2y * p + g3y * op;
+    // Point on the curve between blue points
+    var x = b1x * p + b2x * op;
+    var y = b1y * p + b2y * op;
+    return [x, y];
+  };
+
+  class GraphEdge extends Component {
+    // static displayName = 'TheGraphEdge';
+    get displayName() {
+      return 'TheGraphEdge'
+    }
+
+    _addEventListener(node, event, handler, ...args) {
+      node.addEventListener(event, handler.bind(this), ...args);
+    }
+
+    componentWillMount() {}
+    componentDidMount() {
+      var domNode = ReactDOM.findDOMNode(this);
+
+      // Dragging
+      domNode.addEventListener("track", this.trackHandler);
+
+      if (this.props.onEdgeSelection) {
+        // Needs to be click (not tap) to get event.shiftKey
+        domNode.addEventListener("tap", this.onEdgeSelection);
+      }
+
+      // Context menu
+      if (this.props.showContext) {
+        domNode.addEventListener("contextmenu", this.showContext);
+        domNode.addEventListener("hold", this.showContext);
+      }
+    }
+    trackHandler(event) {
+      switch (event.detail.state) {
+        case 'start':
+          this.dontPan(event);
+      }
+    }
+
+    dontPan(event) {
+      // Don't drag under menu
+      if (this.props.app.menuShown) {
+        event.stopPropagation();
+      }
+    }
+    onEdgeSelection(event) {
+      // Don't click app
+      event.stopPropagation();
+
+      var toggle = (TheGraph.metaKeyPressed || event.pointerType === "touch");
+      this.props.onEdgeSelection(this.props.edgeID, this.props.edge, toggle);
+    }
+    showContext(event) {
+      // Don't show native context menu
+      event.preventDefault();
+
+      // Don't tap graph on hold event
+      event.stopPropagation();
+      if (event.preventTap) {
+        event.preventTap();
+      }
+
+      // Get mouse position
+      var x = event.x || event.clientX || 0;
+      var y = event.y || event.clientY || 0;
+
+      // App.showContext
+      this.props.showContext({
+        element: this,
+        type: (this.props.export ? (this.props.isIn ? "graphInport" : "graphOutport") : "edge"),
+        x: x,
+        y: y,
+        graph: this.props.graph,
+        itemKey: (this.props.export ? this.props.exportKey : null),
+        item: (this.props.export ? this.props.export : this.props.edge)
+      });
+
+    }
+    getContext(menu, options, hide) {
+      return TheGraph.Menu({
+        menu: menu,
+        options: options,
+        triggerHideContext: hide,
+        label: this.props.label,
+        iconColor: this.props.route
+      });
+    }
+    shouldComponentUpdate(nextProps, nextState) {
+      // Only rerender if changed
+      return (
+        nextProps.sX !== this.props.sX ||
+        nextProps.sY !== this.props.sY ||
+        nextProps.tX !== this.props.tX ||
+        nextProps.tY !== this.props.tY ||
+        nextProps.selected !== this.props.selected ||
+        nextProps.animated !== this.props.animated ||
+        nextProps.route !== this.props.route
+      );
+    }
+    getTooltipTrigger() {
+      return ReactDOM.findDOMNode(this.refs.touch);
+    }
+    shouldShowTooltip() {
+      return true;
+    }
+    render() {
+      var sourceX = this.props.sX;
+      var sourceY = this.props.sY;
+      var targetX = this.props.tX;
+      var targetY = this.props.tY;
+
+      // Organic / curved edge
+      var c1X, c1Y, c2X, c2Y;
+      if (targetX - 5 < sourceX) {
+        var curveFactor = (sourceX - targetX) * CURVE / 200;
+        if (Math.abs(targetY - sourceY) < TheGraph.config.nodeSize / 2) {
+          // Loopback
+          c1X = sourceX + curveFactor;
+          c1Y = sourceY - curveFactor;
+          c2X = targetX - curveFactor;
+          c2Y = targetY - curveFactor;
+        } else {
+          // Stick out some
+          c1X = sourceX + curveFactor;
+          c1Y = sourceY + (targetY > sourceY ? curveFactor : -curveFactor);
+          c2X = targetX - curveFactor;
+          c2Y = targetY + (targetY > sourceY ? -curveFactor : curveFactor);
+        }
+      } else {
+        // Controls halfway between
+        c1X = sourceX + (targetX - sourceX) / 2;
+        c1Y = sourceY;
+        c2X = c1X;
+        c2Y = targetY;
+      }
+
+      // Make SVG path
+
+      var path = TheGraph.factories.edge.createEdgePathArray(sourceX, sourceY, c1X, c1Y, c2X, c2Y, targetX, targetY);
+      path = path.join(" ");
+
+      var backgroundPathOptions = TheGraph.merge(TheGraph.config.edge.backgroundPath, {
+        d: path
+      });
+      var backgroundPath = TheGraph.factories.edge.createEdgeBackgroundPath(backgroundPathOptions);
+
+      var foregroundPathClassName = TheGraph.config.edge.foregroundPath.className + this.props.route;
+      var foregroundPathOptions = TheGraph.merge(TheGraph.config.edge.foregroundPath, {
+        d: path,
+        className: foregroundPathClassName
+      });
+      var foregroundPath = TheGraph.factories.edge.createEdgeForegroundPath(foregroundPathOptions);
+
+      var touchPathOptions = TheGraph.merge(TheGraph.config.edge.touchPath, {
+        d: path
+      });
+      var touchPath = TheGraph.factories.edge.createEdgeTouchPath(touchPathOptions);
+
+      var containerOptions = {
+        className: "edge" +
+          (this.props.selected ? " selected" : "") +
+          (this.props.animated ? " animated" : ""),
+        title: this.props.label
+      };
+
+      containerOptions = TheGraph.merge(TheGraph.config.edge.container, containerOptions);
+
+      var epsilon = 0.01;
+      var center = findPointOnCubicBezier(0.5, sourceX, sourceY, c1X, c1Y, c2X, c2Y, targetX, targetY);
+
+      // estimate slope and intercept of tangent line
+      var getShiftedPoint = function (epsilon) {
+        return findPointOnCubicBezier(
+          0.5 + epsilon, sourceX, sourceY, c1X, c1Y, c2X, c2Y, targetX, targetY);
+      };
+      var plus = getShiftedPoint(epsilon);
+      var minus = getShiftedPoint(-epsilon);
+      var m = 1 * (plus[1] - minus[1]) / (plus[0] - minus[0]);
+      var b = center[1] - (m * center[0]);
+
+      // find point on line y = mx + b that is `offset` away from x,y
+      var findLinePoint = function (x, y, m, b, offset, flip) {
+        var x1 = x + offset / Math.sqrt(1 + m * m);
+        var y1;
+        if (Math.abs(m) === Infinity) {
+          y1 = y + (flip || 1) * offset;
+        } else {
+          y1 = (m * x1) + b;
+        }
+        return [x1, y1];
+      };
+
+      var arrowLength = 12;
+      // Which direction should arrow point
+      if (plus[0] > minus[0]) {
+        arrowLength *= -1;
+      }
+      center = findLinePoint(center[0], center[1], m, b, -1 * arrowLength / 2);
+
+      // find points of perpendicular line length l centered at x,y
+      var perpendicular = function (x, y, oldM, l) {
+        var m = -1 / oldM;
+        var b = y - m * x;
+        var point1 = findLinePoint(x, y, m, b, l / 2);
+        var point2 = findLinePoint(x, y, m, b, l / -2);
+        return [point1, point2];
+      };
+
+      var points = perpendicular(center[0], center[1], m, arrowLength * 0.9);
+      // For m === 0, figure out if arrow should be straight up or down
+      var flip = plus[1] > minus[1] ? -1 : 1;
+      var arrowTip = findLinePoint(center[0], center[1], m, b, arrowLength, flip);
+      points.push(arrowTip);
+
+      var pointsArray = points.map(
+        function (point) {
+          return point.join(',');
+        }).join(' ');
+      var arrowBg = TheGraph.factories.edge.createArrow({
+        points: pointsArray,
+        className: 'arrow-bg'
+      });
+
+      var arrow = TheGraph.factories.edge.createArrow({
+        points: pointsArray,
+        className: 'arrow fill route' + this.props.route
+      });
+
+      return TheGraph.factories.edge.createEdgeGroup(containerOptions, [backgroundPath, arrowBg, foregroundPath, touchPath, arrow]);
+    }
+  }
+
+  var ToolTipMixin = require('../mixins/tooltip')
+  reactMixin.bindClass(GraphEdge, ToolTipMixin)
+  return GraphEdge
+}
+},{"../mixins/tooltip":73,"react":48,"react-mixin":90}],55:[function(require,module,exports){
+const reactMixin = require('react-mixin');
+const Component = require('react').Component
+
+module.exports = class GraphMenu extends Component {
+  // static displayName = 'TheGraphNode';
+  get displayName() {
+    return 'TheGraphMenu'
+  }
+
+  _addEventListener(node, event, handler, ...args) {
+    node.addEventListener(event, handler.bind(this), ...args);
+  }
+
+  get radius() {
+    return TheGraph.config.menu.radius
+  }
+
+  getInitialState() {
+    // Use these in CSS for cursor and hover, and to attach listeners
+    return {
+      n4tappable: (this.props.menu.n4 && this.props.menu.n4.action),
+      s4tappable: (this.props.menu.s4 && this.props.menu.s4.action),
+      e4tappable: (this.props.menu.e4 && this.props.menu.e4.action),
+      w4tappable: (this.props.menu.w4 && this.props.menu.w4.action),
+    };
+  }
+  onTapN4() {
+    var options = this.props.options;
+    this.props.menu.n4.action(options.graph, options.itemKey, options.item);
+    this.props.triggerHideContext();
+  }
+  onTapS4() {
+    var options = this.props.options;
+    this.props.menu.s4.action(options.graph, options.itemKey, options.item);
+    this.props.triggerHideContext();
+  }
+  onTapE4() {
+    var options = this.props.options;
+    this.props.menu.e4.action(options.graph, options.itemKey, options.item);
+    this.props.triggerHideContext();
+  }
+  onTapW4() {
+    var options = this.props.options;
+    this.props.menu.w4.action(options.graph, options.itemKey, options.item);
+    this.props.triggerHideContext();
+  }
+  componentDidMount() {
+    if (this.state.n4tappable) {
+      this.refs.n4.addEventListener("up", this.onTapN4);
+    }
+    if (this.state.s4tappable) {
+      this.refs.s4.addEventListener("up", this.onTapS4);
+    }
+    if (this.state.e4tappable) {
+      this.refs.e4.addEventListener("up", this.onTapE4);
+    }
+    if (this.state.w4tappable) {
+      this.refs.w4.addEventListener("up", this.onTapW4);
+    }
+
+    // Prevent context menu
+    ReactDOM.findDOMNode(this).addEventListener("contextmenu", function (event) {
+      if (event) {
+        event.stopPropagation();
+        event.preventDefault();
+      }
+    }, false);
+  }
+  getPosition() {
+    return {
+      x: this.props.x !== undefined ? this.props.x : this.props.options.x || 0,
+      y: this.props.y !== undefined ? this.props.y : this.props.options.y || 0
+    };
+  }
+  render() {
+    var menu = this.props.menu;
+    var options = this.props.options;
+    var position = this.getPosition();
+
+    var circleXOptions = TheGraph.merge(TheGraph.config.menu.circleXPath, {});
+    var outlineCircleOptions = TheGraph.merge(TheGraph.config.menu.outlineCircle, {
+      r: this.radius
+    });
+
+    var children = [
+      // Directional slices
+      TheGraph.factories.menu.createMenuSlice.call(this, {
+        direction: "n4"
+      }),
+      TheGraph.factories.menu.createMenuSlice.call(this, {
+        direction: "s4"
+      }),
+      TheGraph.factories.menu.createMenuSlice.call(this, {
+        direction: "e4"
+      }),
+      TheGraph.factories.menu.createMenuSlice.call(this, {
+        direction: "w4"
+      }),
+      // Outline and X
+      TheGraph.factories.menu.createMenuCircleXPath.call(this, circleXOptions),
+      TheGraph.factories.menu.createMenuOutlineCircle.call(this, outlineCircleOptions)
+    ];
+    // Menu label
+    if (this.props.label || menu.icon) {
+
+      var labelTextOptions = {
+        x: 0,
+        y: 0 - this.radius - 15,
+        children: (this.props.label ? this.props.label : menu.label)
+      };
+
+      labelTextOptions = TheGraph.merge(TheGraph.config.menu.labelText, labelTextOptions);
+      children.push(TheGraph.factories.menu.createMenuLabelText.call(this, labelTextOptions));
+    }
+    // Middle icon
+    if (this.props.icon || menu.icon) {
+      var iconColor = (this.props.iconColor !== undefined ? this.props.iconColor : menu.iconColor);
+      var iconStyle = "";
+      if (iconColor) {
+        iconStyle = " fill route" + iconColor;
+      }
+
+      var middleIconRectOptions = TheGraph.merge(TheGraph.config.menu.iconRect, {});
+      var middleIcon = TheGraph.factories.menu.createMenuMiddleIconRect.call(this, middleIconRectOptions);
+
+      var middleIconTextOptions = {
+        className: "icon context-node-icon" + iconStyle,
+        children: TheGraph.FONT_AWESOME[(this.props.icon ? this.props.icon : menu.icon)]
+      };
+      middleIconTextOptions = TheGraph.merge(TheGraph.config.menu.iconText, middleIconTextOptions);
+      var iconText = TheGraph.factories.menu.createMenuMiddleIconText.call(this, middleIconTextOptions);
+
+      children.push(middleIcon, iconText);
+    }
+
+    var containerOptions = {
+      transform: "translate(" + position.x + "," + position.y + ")",
+      children: children
+    };
+
+    containerOptions = TheGraph.merge(TheGraph.config.menu.container, containerOptions);
+    return TheGraph.factories.menu.createMenuGroup.call(this, containerOptions);
+
+  }
+}
+},{"react":48,"react-mixin":90}],56:[function(require,module,exports){
+module.exports = React.createClass({
+  displayName: "TheGraphNodeMenu",
+  radius: 72,
+  stopPropagation: function (event) {
+    // Don't drag graph
+    event.stopPropagation();
+  },
+  componentDidMount: function () {
+    // Prevent context menu
+    ReactDOM.findDOMNode(this).addEventListener("contextmenu", function (event) {
+      event.stopPropagation();
+      event.preventDefault();
+    }, false);
+  },
+  render: function () {
+    var scale = this.props.node.props.app.state.scale;
+    var ports = this.props.ports;
+    var deltaX = this.props.deltaX;
+    var deltaY = this.props.deltaY;
+
+    var inportsOptions = {
+      ports: ports.inports,
+      isIn: true,
+      scale: scale,
+      processKey: this.props.processKey,
+      deltaX: deltaX,
+      deltaY: deltaY,
+      nodeWidth: this.props.nodeWidth,
+      nodeHeight: this.props.nodeHeight,
+      highlightPort: this.props.highlightPort
+    };
+
+    inportsOptions = TheGraph.merge(TheGraph.config.nodeMenu.inports, inportsOptions);
+    var inports = TheGraph.factories.nodeMenu.createNodeMenuInports.call(this, inportsOptions);
+
+    var outportsOptions = {
+      ports: ports.outports,
+      isIn: false,
+      scale: scale,
+      processKey: this.props.processKey,
+      deltaX: deltaX,
+      deltaY: deltaY,
+      nodeWidth: this.props.nodeWidth,
+      nodeHeight: this.props.nodeHeight,
+      highlightPort: this.props.highlightPort
+    };
+
+    outportsOptions = TheGraph.merge(TheGraph.config.nodeMenu.outports, outportsOptions);
+    var outports = TheGraph.factories.nodeMenu.createNodeMenuOutports.call(this, outportsOptions);
+
+    var menuOptions = {
+      menu: this.props.menu,
+      options: this.props.options,
+      triggerHideContext: this.props.triggerHideContext,
+      icon: this.props.icon,
+      label: this.props.label
+    };
+
+    menuOptions = TheGraph.merge(TheGraph.config.nodeMenu.menu, menuOptions);
+    var menu = TheGraph.factories.nodeMenu.createNodeMenuMenu.call(this, menuOptions);
+
+    var children = [
+      inports, outports, menu
+    ];
+
+    var containerOptions = {
+      transform: "translate(" + this.props.x + "," + this.props.y + ")",
+      children: children
+    };
+    containerOptions = TheGraph.merge(TheGraph.config.nodeMenu.container, containerOptions);
+    return TheGraph.factories.nodeMenu.createNodeMenuGroup.call(this, containerOptions);
+
+  }
+})
+},{}],57:[function(require,module,exports){
+const reactMixin = require('react-mixin');
 const Component = require('react').Component
 
 class GraphNode extends Component {
@@ -14106,22 +14589,26 @@ class GraphNode extends Component {
     return 'TheGraphNode'
   }
 
+  _addEventListener(node, event, handler, ...args) {
+    node.addEventListener(event, handler.bind(this), ...args);
+  }
+
   componentDidMount() {
     // patchGestures();
     var domNode = ReactDOM.findDOMNode(this);
 
     // Dragging
-    domNode.addEventListener('track', this.trackHandler);
+    this._addEventListener(domNode, 'track', this.trackHandler);
 
     // Tap to select
     if (this.props.onNodeSelection) {
-      domNode.addEventListener('tap', this.onNodeSelection, true);
+      this._addEventListener(domNode, 'tap', this.onNodeSelection, true);
     }
 
     // Context menu
     if (this.props.showContext) {
-      domNode.addEventListener('contextmenu', this.showContext);
-      domNode.addEventListener('hold', this.showContext);
+      this._addEventListener(domNode, 'contextmenu', this.showContext);
+      this._addEventListener(domNode, 'hold', this.showContext);
     }
   }
 
@@ -14595,23 +15082,589 @@ function buildLabelRectOptions(height, x, y, len, className) {
   return result;
 }
 
-
 var ToolTipMixin = require('../mixins/tooltip')
-// var autobinder = require('../mixins/autobinder')
-
-// reactMixin.bindClass = function (clazz, mixin) {
-//   const boundMixin = autobinder.autobound(ToolTipMixin)
-//   reactMixin.onClass(clazz, mixin);
-//   reactMixin.onClass(clazz, boundMixin);
-// }
-
 reactMixin.bindClass(GraphNode, ToolTipMixin)
 
-// const ToolTipMixin = require('./enhance/tooltip')
-
-// module.exports = ToolTipMixin(GraphNode)
 module.exports = GraphNode
-},{"../mixins/tooltip":56,"react":48,"react-mixin":73}],55:[function(require,module,exports){
+},{"../mixins/tooltip":73,"react":48,"react-mixin":90}],58:[function(require,module,exports){
+const reactMixin = require('react-mixin');
+const Component = require('react').Component
+
+class GraphPort extends Component {
+  get displayName() {
+    return 'TheGraphPort'
+  }
+
+  _addEventListener(node, event, handler, ...args) {
+    node.addEventListener(event, handler.bind(this), ...args);
+  }
+
+
+  componentDidMount() {
+    let node = ReactDOM.findDOMNode(this);
+    // Preview edge start
+    this._addEventListener(node, 'tap', this.edgeStart);
+    // Make edge
+    this._addEventListener(node, 'track', this.trackHandler);
+    this._addEventListener(node, 'the-graph-edge-drop', this.edgeStart);
+
+    // Show context menu
+    if (this.props.showContext) {
+      this._addEventListener(node, 'contextmenu', this.showContext);
+      this._addEventListener(node, 'hold', this.showContext);
+    }
+  }
+
+  trackHandler(event) {
+    // Don't fire on graph
+    event.stopPropagation();
+    let detail = event.detail
+    switch (detail.state) {
+      case 'start':
+        this.edgeStart(event);
+        break;
+      case 'track':
+        // this._onTrack(event);
+        break;
+      case 'end':
+        let hoverElem = detail.hover()
+        event.relatedTarget = hoverElem
+        this.triggerDropOnTarget(event);
+        break;
+    }
+  }
+
+  getTooltipTrigger() {
+    return ReactDOM.findDOMNode(this);
+  }
+
+  shouldShowTooltip() {
+    return (
+      this.props.app.state.scale < TheGraph.zbpBig ||
+      this.props.label.length > 8
+    );
+  }
+  showContext(event) {
+    // Don't show port menu on export node port
+    if (this.props.isExport) {
+      return;
+    }
+    // Click on label, pass context menu to node
+    if (event && (event.target === ReactDOM.findDOMNode(this.refs.label))) {
+      return;
+    }
+    // Don't show native context menu
+    event.preventDefault();
+
+    // Don't tap graph on hold event
+    event.stopPropagation();
+    if (event.preventTap) {
+      event.preventTap();
+    }
+
+    // Get mouse position
+    var x = event.x || event.clientX || 0;
+    var y = event.y || event.clientY || 0;
+
+    // App.showContext
+    this.props.showContext({
+      element: this,
+      type: (this.props.isIn ? 'nodeInport' : 'nodeOutport'),
+      x: x,
+      y: y,
+      graph: this.props.graph,
+      itemKey: this.props.label,
+      item: this.props.port
+    });
+  }
+
+  getContext(menu, options, hide) {
+    return TheGraph.Menu({
+      menu: menu,
+      options: options,
+      label: this.props.label,
+      triggerHideContext: hide
+    });
+  }
+
+  edgeStart(event) {
+    // Don't start edge on export node port
+    if (this.props.isExport) {
+      return;
+    }
+
+    // Click on label, pass context menu to node
+    if (event && (event.target === ReactDOM.findDOMNode(this.refs.label))) {
+      return;
+    }
+    // Don't tap graph
+    event.stopPropagation();
+    var edgeStartEvent = new CustomEvent('the-graph-edge-start', {
+      detail: {
+        isIn: this.props.isIn,
+        port: this.props.port,
+        // process: this.props.processKey,
+        route: this.props.route
+      },
+      bubbles: true
+    });
+    let node = ReactDOM.findDOMNode(this)
+    node.dispatchEvent(edgeStartEvent);
+  }
+
+  triggerDropOnTarget(event) {
+    let sourceEvent = event.detail.sourceEvent
+
+    // throw new Error('fuck')
+    // If dropped on a child element will bubble up to port
+
+    // 'relatedTarget', optional and defaulting to null, of type EventTarget,
+    // that is the element just left (in case of  a mouseenter or mouseover)
+    // or is entering (in case of a mouseout or mouseleave).
+    var target = event.relatedTarget // || sourceEvent.toElement || sourceEvent.fromElement
+    if (!target) {
+      return;
+    }
+    var dropEvent = new CustomEvent('the-graph-edge-drop', {
+      detail: null,
+      bubbles: true
+    });
+    let targetNode = target
+    targetNode.dispatchEvent(dropEvent);
+  }
+
+  render() {
+    var style;
+    if (this.props.label.length > 7) {
+      var fontSize = 6 * (30 / (4 * this.props.label.length));
+      style = {
+        'fontSize': fontSize + 'px'
+      };
+    }
+    var r = 4;
+    // Highlight matching ports
+    var highlightPort = this.props.highlightPort;
+    var inArc = TheGraph.arcs.inport;
+    var outArc = TheGraph.arcs.outport;
+    if (highlightPort && highlightPort.isIn === this.props.isIn && (highlightPort.type === this.props.port.type || this.props.port.type === 'any')) {
+      r = 6;
+      inArc = TheGraph.arcs.inportBig;
+      outArc = TheGraph.arcs.outportBig;
+    }
+
+    var backgroundCircleOptions = TheGraph.merge(TheGraph.config.port.backgroundCircle, {
+      r: r + 1
+    });
+    var backgroundCircle = TheGraph.factories.port.createPortBackgroundCircle.call(this, backgroundCircleOptions);
+
+    var arcOptions = TheGraph.merge(TheGraph.config.port.arc, {
+      d: (this.props.isIn ? inArc : outArc)
+    });
+    var arc = TheGraph.factories.port.createPortArc.call(this, arcOptions);
+
+    var innerCircleOptions = {
+      className: 'port-circle-small fill route' + this.props.route,
+      r: r // - 0.5
+    };
+
+    innerCircleOptions = TheGraph.merge(TheGraph.config.port.innerCircle, innerCircleOptions);
+    var innerCircle = TheGraph.factories.port.createPortInnerCircle.call(this, innerCircleOptions);
+
+    var labelTextOptions = {
+      x: (this.props.isIn ? 5 : -5),
+      style: style,
+      children: this.props.label
+    };
+    labelTextOptions = TheGraph.merge(TheGraph.config.port.text, labelTextOptions);
+    var labelText = TheGraph.factories.port.createPortLabelText.call(this, labelTextOptions);
+
+    var portContents = [
+      backgroundCircle,
+      arc,
+      innerCircle,
+      labelText
+    ];
+
+    var containerOptions = TheGraph.merge(TheGraph.config.port.container, {
+      title: this.props.label,
+      transform: 'translate(' + this.props.x + ',' + this.props.y + ')'
+    });
+    return TheGraph.factories.port.createPortGroup.call(this, containerOptions, portContents);
+
+  }
+}
+
+var ToolTipMixin = require('../mixins/tooltip')
+reactMixin.bindClass(GraphPort, ToolTipMixin)
+
+module.exports = GraphPort
+},{"../mixins/tooltip":73,"react":48,"react-mixin":90}],59:[function(require,module,exports){
+const reactMixin = require('react-mixin');
+const Component = require('react').Component
+
+module.exports = class GraphTooltip extends Component {
+  get displayName() {
+    return 'TheGraphTooltip'
+  }
+
+  render() {
+
+    var rectOptions = TheGraph.merge(TheGraph.config.tooltip.rect, {
+      width: this.props.label.length * 6
+    });
+    var rect = TheGraph.factories.tooltip.createTooltipRect.call(this, rectOptions);
+
+    var textOptions = TheGraph.merge(TheGraph.config.tooltip.text, {
+      children: this.props.label
+    });
+    var text = TheGraph.factories.tooltip.createTooltipText.call(this, textOptions);
+
+    var containerContents = [rect, text];
+
+    var containerOptions = {
+      className: "tooltip" + (this.props.visible ? "" : " hidden"),
+      transform: "translate(" + this.props.x + "," + this.props.y + ")",
+    };
+    containerOptions = TheGraph.merge(TheGraph.config.tooltip.container, containerOptions);
+    return TheGraph.factories.tooltip.createTooltipGroup.call(this, containerOptions, containerContents);
+
+  }
+}
+},{"react":48,"react-mixin":90}],60:[function(require,module,exports){
+module.exports = React.createClass({
+  displayName: "TheGraphModalBG",
+  componentDidMount: function () {
+    var domNode = ReactDOM.findDOMNode(this);
+    var rectNode = this.refs.rect;
+
+    // Right-click on another item will show its menu
+    domNode.addEventListener("down", function (event) {
+      // Only if outside of menu
+      if (event && event.target === rectNode) {
+        this.hideModal();
+      }
+    }.bind(this));
+  },
+  hideModal: function (event) {
+    this.props.triggerHideContext();
+  },
+  render: function () {
+
+
+    var rectOptions = {
+      width: this.props.width,
+      height: this.props.height
+    };
+
+    rectOptions = TheGraph.merge(TheGraph.config.modalBG.rect, rectOptions);
+    var rect = TheGraph.factories.modalBG.createModalBackgroundRect.call(this, rectOptions);
+
+    var containerContents = [rect, this.props.children];
+    var containerOptions = TheGraph.merge(TheGraph.config.modalBG.container, {});
+    return TheGraph.factories.modalBG.createModalBackgroundGroup.call(this, containerOptions, containerContents);
+  }
+})
+},{}],61:[function(require,module,exports){
+module.exports = config => {
+  return {
+    curve: config.nodeSize,
+    container: {
+      className: "edge"
+    },
+    backgroundPath: {
+      className: "edge-bg"
+    },
+    foregroundPath: {
+      ref: "route",
+      className: "edge-fg stroke route"
+    },
+    touchPath: {
+      className: "edge-touch",
+      ref: "touch"
+    }
+  };
+}
+},{}],62:[function(require,module,exports){
+module.exports = config => {
+  return {
+    radius: 72,
+    positions: {
+      n4IconX: 0,
+      n4IconY: -52,
+      n4LabelX: 0,
+      n4LabelY: -35,
+      s4IconX: 0,
+      s4IconY: 52,
+      s4LabelX: 0,
+      s4LabelY: 35,
+      e4IconX: 45,
+      e4IconY: -5,
+      e4LabelX: 45,
+      e4LabelY: 15,
+      w4IconX: -45,
+      w4IconY: -5,
+      w4LabelX: -45,
+      w4LabelY: 15
+    },
+    container: {
+      className: "context-menu"
+    },
+    arcPath: {
+      className: "context-arc context-node-info-bg"
+    },
+    sliceIconText: {
+      className: "icon context-icon context-node-info-icon"
+    },
+    sliceLabelText: {
+      className: "context-arc-label"
+    },
+    sliceIconLabelText: {
+      className: "context-arc-icon-label"
+    },
+    circleXPath: {
+      className: "context-circle-x",
+      d: "M -51 -51 L 51 51 M -51 51 L 51 -51"
+    },
+    outlineCircle: {
+      className: "context-circle"
+    },
+    labelText: {
+      className: "context-node-label"
+    },
+    iconRect: {
+      className: "context-node-rect",
+      x: -24,
+      y: -24,
+      width: 48,
+      height: 48,
+      rx: config.nodeRadius,
+      ry: config.nodeRadius
+    }
+  };
+}
+},{}],63:[function(require,module,exports){
+module.exports = (config) => {
+  return {
+    snap: config.nodeSize,
+    container: {},
+    background: {
+      className: "node-bg"
+    },
+    border: {
+      className: "node-border drag",
+      rx: config.nodeRadius,
+      ry: config.nodeRadius
+    },
+    innerRect: {
+      className: "node-rect drag",
+      x: 3,
+      y: 3,
+      rx: config.nodeRadius - 2,
+      ry: config.nodeRadius - 2
+    },
+    icon: {
+      ref: "icon",
+      className: "icon node-icon drag"
+    },
+    iconsvg: {
+      className: "icon node-icon drag"
+    },
+    inports: {
+      className: "inports"
+    },
+    outports: {
+      className: "outports"
+    },
+    labelBackground: {
+      className: "node-label-bg"
+    },
+    labelRect: {
+      className: "text-bg-rect"
+    },
+    labelText: {
+      className: "node-label"
+    },
+    sublabelBackground: {
+      className: "node-sublabel-bg"
+    },
+    sublabelRect: {
+      className: "text-bg-rect"
+    },
+    sublabelText: {
+      className: "node-sublabel"
+    }
+  }
+}
+},{}],64:[function(require,module,exports){
+module.exports = {
+  container: {
+    className: "port arrow"
+  },
+  backgroundCircle: {
+    className: "port-circle-bg"
+  },
+  arc: {
+    className: "port-arc"
+  },
+  innerCircle: {
+    ref: "circleSmall"
+  },
+  text: {
+    ref: "label",
+    className: "port-label drag"
+  }
+};
+},{}],65:[function(require,module,exports){
+module.exports = {
+  container: {},
+  rect: {
+    className: "tooltip-bg",
+    x: 0,
+    y: -7,
+    rx: 3,
+    ry: 3,
+    height: 16
+  },
+  text: {
+    className: "tooltip-label",
+    ref: "label"
+  }
+};
+},{}],66:[function(require,module,exports){
+function createEdgePathArray(sourceX, sourceY,
+  c1X, c1Y, c2X, c2Y,
+  targetX, targetY) {
+  return [
+    "M",
+    sourceX, sourceY,
+    "C",
+    c1X, c1Y,
+    c2X, c2Y,
+    targetX, targetY
+  ];
+}
+
+module.exports = factories => {
+  return {
+    createEdgeGroup: factories.createGroup,
+    createEdgeBackgroundPath: factories.createPath,
+    createEdgeForegroundPath: factories.createPath,
+    createEdgeTouchPath: factories.createPath,
+    createEdgePathArray: createEdgePathArray,
+    createArrow: factories.createPolygon
+  };
+}
+},{}],67:[function(require,module,exports){
+module.exports = TheGraph => {
+  function createMenuSlice(options) {
+    /*jshint validthis:true */
+    var direction = options.direction;
+    var arcPathOptions = TheGraph.merge(TheGraph.config.menu.arcPath, {
+      d: TheGraph.arcs[direction]
+    });
+    var children = [
+      TheGraph.factories.menu.createMenuSliceArcPath(arcPathOptions)
+    ];
+
+    if (this.props.menu[direction]) {
+      var slice = this.props.menu[direction];
+      if (slice.icon) {
+        var sliceIconTextOptions = {
+          x: TheGraph.config.menu.positions[direction + "IconX"],
+          y: TheGraph.config.menu.positions[direction + "IconY"],
+          children: TheGraph.FONT_AWESOME[slice.icon]
+        };
+        sliceIconTextOptions = TheGraph.merge(TheGraph.config.menu.sliceIconText, sliceIconTextOptions);
+        children.push(TheGraph.factories.menu.createMenuSliceIconText.call(this, sliceIconTextOptions));
+      }
+      if (slice.label) {
+        var sliceLabelTextOptions = {
+          x: TheGraph.config.menu.positions[direction + "IconX"],
+          y: TheGraph.config.menu.positions[direction + "IconY"],
+          children: slice.label
+        };
+        sliceLabelTextOptions = TheGraph.merge(TheGraph.config.menu.sliceLabelText, sliceLabelTextOptions);
+        children.push(TheGraph.factories.menu.createMenuSliceLabelText.call(this, sliceLabelTextOptions));
+      }
+      if (slice.iconLabel) {
+        var sliceIconLabelTextOptions = {
+          x: TheGraph.config.menu.positions[direction + "LabelX"],
+          y: TheGraph.config.menu.positions[direction + "LabelY"],
+          children: slice.iconLabel
+        };
+        sliceIconLabelTextOptions = TheGraph.merge(TheGraph.config.menu.sliceIconLabelText, sliceIconLabelTextOptions);
+        children.push(TheGraph.factories.menu.createMenuSliceIconLabelText.call(this, sliceIconLabelTextOptions));
+      }
+    }
+
+    var containerOptions = {
+      ref: direction,
+      className: "context-slice context-node-info" + (this.state[direction + "tappable"] ? " click" : ""),
+      children: children
+    };
+    containerOptions = TheGraph.merge(TheGraph.config.menu.container, containerOptions);
+    return TheGraph.factories.menu.createMenuGroup.call(this, containerOptions);
+  }
+
+  return {
+    createMenuGroup: TheGraph.factories.createGroup,
+    createMenuSlice: createMenuSlice,
+    createMenuSliceArcPath: TheGraph.factories.createPath,
+    createMenuSliceText: TheGraph.factories.createText,
+    createMenuSliceIconText: TheGraph.factories.createText,
+    createMenuSliceLabelText: TheGraph.factories.createText,
+    createMenuSliceIconLabelText: TheGraph.factories.createText,
+    createMenuCircleXPath: TheGraph.factories.createPath,
+    createMenuOutlineCircle: TheGraph.factories.createCircle,
+    createMenuLabelText: TheGraph.factories.createText,
+    createMenuMiddleIconRect: TheGraph.factories.createRect,
+    createMenuMiddleIconText: TheGraph.factories.createText
+  };
+}
+},{}],68:[function(require,module,exports){
+module.exports = TheGraph => {
+  function createNodePort(options) {
+    // console.log('createNodePort', options)
+    return TheGraph.Port(options);
+  }
+
+  return {
+    createNodeGroup: TheGraph.factories.createGroup,
+    createNodeBackgroundRect: TheGraph.factories.createRect,
+    createNodeBorderRect: TheGraph.factories.createRect,
+    createNodeInnerRect: TheGraph.factories.createRect,
+    createNodeIconText: TheGraph.factories.createText,
+    createNodeIconSVG: TheGraph.factories.createImg,
+    createNodeInportsGroup: TheGraph.factories.createGroup,
+    createNodeOutportsGroup: TheGraph.factories.createGroup,
+    createNodeLabelGroup: TheGraph.factories.createGroup,
+    createNodeLabelRect: TheGraph.factories.createRect,
+    createNodeLabelText: TheGraph.factories.createText,
+    createNodeSublabelGroup: TheGraph.factories.createGroup,
+    createNodeSublabelRect: TheGraph.factories.createRect,
+    createNodeSublabelText: TheGraph.factories.createText,
+    createNodePort: createNodePort
+  };
+}
+},{}],69:[function(require,module,exports){
+module.exports = factories => {
+  return {
+    createPortGroup: factories.createGroup,
+    createPortBackgroundCircle: factories.createCircle,
+    createPortArc: factories.createPath,
+    createPortInnerCircle: factories.createCircle,
+    createPortLabelText: factories.createText
+  };
+}
+},{}],70:[function(require,module,exports){
+module.exports = factories => {
+  return {
+    createTooltipGroup: factories.createGroup,
+    createTooltipRect: factories.createRect,
+    createTooltipText: factories.createText
+  };
+}
+},{}],71:[function(require,module,exports){
 /*
   this file is generated via `grunt build` 
 */
@@ -15408,7 +16461,25 @@ context.TheGraph.FONT_AWESOME = {
 };
 
 };
-},{}],56:[function(require,module,exports){
+},{}],72:[function(require,module,exports){
+module.exports = function (TheGraph) {
+  TheGraph.config.modalBG = {
+    container: {},
+    rect: {
+      ref: "rect",
+      className: "context-modal-bg"
+    }
+  };
+
+  TheGraph.factories.modalBG = {
+    createModalBackgroundGroup: TheGraph.factories.createGroup,
+    createModalBackgroundRect: TheGraph.factories.createRect
+  };
+
+  const ModalBg = require('../components/menu/modal-bg')
+  TheGraph.ModalBG = React.createFactory(ModalBg);
+}
+},{"../components/menu/modal-bg":60}],73:[function(require,module,exports){
 module.exports = {
   showTooltip: function (event) {
     if (!this.shouldShowTooltip()) {
@@ -15433,7 +16504,8 @@ module.exports = {
     var tooltipEvent = new CustomEvent('the-graph-tooltip-hide', {
       bubbles: true
     });
-    if (this.isMounted()) {
+    // NOTE: https://facebook.github.io/react/blog/2015/12/16/ismounted-antipattern.html
+    if (this.isMounted && this.isMounted()) {
       ReactDOM.findDOMNode(this).dispatchEvent(tooltipEvent);
     }
   },
@@ -15448,7 +16520,7 @@ module.exports = {
     tooltipper.addEventListener("mouseleave", this.hideTooltip);
   }
 };
-},{}],57:[function(require,module,exports){
+},{}],74:[function(require,module,exports){
 module.exports.register = function (context) {
 
   var TheGraph = context.TheGraph;
@@ -16129,7 +17201,7 @@ module.exports.register = function (context) {
 
 
 };
-},{}],58:[function(require,module,exports){
+},{}],75:[function(require,module,exports){
 
 // NOTE: caller should wrap in a graph transaction, to group all changes made to @graph
 function applyAutolayout(graph, keilerGraph, props) {
@@ -16187,7 +17259,7 @@ module.exports = {
   applyToGraph: applyAutolayout,
 };
 
-},{}],59:[function(require,module,exports){
+},{}],76:[function(require,module,exports){
 /**
  * Created by mpricope on 05.09.14.
  */
@@ -16270,303 +17342,20 @@ module.exports.register = function (context) {
 
 };
 
-},{}],60:[function(require,module,exports){
+},{}],77:[function(require,module,exports){
 module.exports.register = function (context) {
 
   var TheGraph = context.TheGraph;
 
-  TheGraph.config.edge = {
-    curve: TheGraph.config.nodeSize,
-    container: {
-      className: "edge"
-    },
-    backgroundPath: {
-      className: "edge-bg"
-    },
-    foregroundPath: {
-      ref: "route",
-      className: "edge-fg stroke route"
-    },
-    touchPath: {
-      className: "edge-touch",
-      ref: "touch"
-    }
-  };
+  TheGraph.config.edge = require('./config/edge')(TheGraph.config)
 
-  TheGraph.factories.edge = {
-    createEdgeGroup: TheGraph.factories.createGroup,
-    createEdgeBackgroundPath: TheGraph.factories.createPath,
-    createEdgeForegroundPath: TheGraph.factories.createPath,
-    createEdgeTouchPath: TheGraph.factories.createPath,
-    createEdgePathArray: createEdgePathArray,
-    createArrow: TheGraph.factories.createPolygon
-  };
-
-  function createEdgePathArray(sourceX, sourceY, c1X, c1Y, c2X, c2Y, targetX, targetY) {
-    return [
-      "M",
-      sourceX, sourceY,
-      "C",
-      c1X, c1Y,
-      c2X, c2Y,
-      targetX, targetY
-    ];
-  }
-
-  // Const
-  var CURVE = TheGraph.config.edge.curve;
-
-  // Point along cubic bezier curve
-  // See http://en.wikipedia.org/wiki/File:Bezier_3_big.gif
-  var findPointOnCubicBezier = function (p, sx, sy, c1x, c1y, c2x, c2y, ex, ey) {
-    // p is percentage from 0 to 1
-    var op = 1 - p;
-    // 3 green points between 4 points that define curve
-    var g1x = sx * p + c1x * op;
-    var g1y = sy * p + c1y * op;
-    var g2x = c1x * p + c2x * op;
-    var g2y = c1y * p + c2y * op;
-    var g3x = c2x * p + ex * op;
-    var g3y = c2y * p + ey * op;
-    // 2 blue points between green points
-    var b1x = g1x * p + g2x * op;
-    var b1y = g1y * p + g2y * op;
-    var b2x = g2x * p + g3x * op;
-    var b2y = g2y * p + g3y * op;
-    // Point on the curve between blue points
-    var x = b1x * p + b2x * op;
-    var y = b1y * p + b2y * op;
-    return [x, y];
-  };
-
+  TheGraph.factories.edge = require('./factories/edge')(TheGraph.factories)
 
   // Edge view
-
-  TheGraph.Edge = React.createFactory(React.createClass({
-    displayName: "TheGraphEdge",
-    mixins: [
-      TheGraph.mixins.Tooltip
-    ],
-    componentWillMount: function () {},
-    componentDidMount: function () {
-      var domNode = ReactDOM.findDOMNode(this);
-
-      // Dragging
-      domNode.addEventListener("track", this.trackHandler);
-
-      if (this.props.onEdgeSelection) {
-        // Needs to be click (not tap) to get event.shiftKey
-        domNode.addEventListener("tap", this.onEdgeSelection);
-      }
-
-      // Context menu
-      if (this.props.showContext) {
-        domNode.addEventListener("contextmenu", this.showContext);
-        domNode.addEventListener("hold", this.showContext);
-      }
-    },
-    trackHandler: function (event) {
-      switch (event.detail.state) {
-        case 'start':
-          this.dontPan(event);
-      }
-    },
-
-    dontPan: function (event) {
-      // Don't drag under menu
-      if (this.props.app.menuShown) {
-        event.stopPropagation();
-      }
-    },
-    onEdgeSelection: function (event) {
-      // Don't click app
-      event.stopPropagation();
-
-      var toggle = (TheGraph.metaKeyPressed || event.pointerType === "touch");
-      this.props.onEdgeSelection(this.props.edgeID, this.props.edge, toggle);
-    },
-    showContext: function (event) {
-      // Don't show native context menu
-      event.preventDefault();
-
-      // Don't tap graph on hold event
-      event.stopPropagation();
-      if (event.preventTap) {
-        event.preventTap();
-      }
-
-      // Get mouse position
-      var x = event.x || event.clientX || 0;
-      var y = event.y || event.clientY || 0;
-
-      // App.showContext
-      this.props.showContext({
-        element: this,
-        type: (this.props.export ? (this.props.isIn ? "graphInport" : "graphOutport") : "edge"),
-        x: x,
-        y: y,
-        graph: this.props.graph,
-        itemKey: (this.props.export ? this.props.exportKey : null),
-        item: (this.props.export ? this.props.export : this.props.edge)
-      });
-
-    },
-    getContext: function (menu, options, hide) {
-      return TheGraph.Menu({
-        menu: menu,
-        options: options,
-        triggerHideContext: hide,
-        label: this.props.label,
-        iconColor: this.props.route
-      });
-    },
-    shouldComponentUpdate: function (nextProps, nextState) {
-      // Only rerender if changed
-      return (
-        nextProps.sX !== this.props.sX ||
-        nextProps.sY !== this.props.sY ||
-        nextProps.tX !== this.props.tX ||
-        nextProps.tY !== this.props.tY ||
-        nextProps.selected !== this.props.selected ||
-        nextProps.animated !== this.props.animated ||
-        nextProps.route !== this.props.route
-      );
-    },
-    getTooltipTrigger: function () {
-      return ReactDOM.findDOMNode(this.refs.touch);
-    },
-    shouldShowTooltip: function () {
-      return true;
-    },
-    render: function () {
-      var sourceX = this.props.sX;
-      var sourceY = this.props.sY;
-      var targetX = this.props.tX;
-      var targetY = this.props.tY;
-
-      // Organic / curved edge
-      var c1X, c1Y, c2X, c2Y;
-      if (targetX - 5 < sourceX) {
-        var curveFactor = (sourceX - targetX) * CURVE / 200;
-        if (Math.abs(targetY - sourceY) < TheGraph.config.nodeSize / 2) {
-          // Loopback
-          c1X = sourceX + curveFactor;
-          c1Y = sourceY - curveFactor;
-          c2X = targetX - curveFactor;
-          c2Y = targetY - curveFactor;
-        } else {
-          // Stick out some
-          c1X = sourceX + curveFactor;
-          c1Y = sourceY + (targetY > sourceY ? curveFactor : -curveFactor);
-          c2X = targetX - curveFactor;
-          c2Y = targetY + (targetY > sourceY ? -curveFactor : curveFactor);
-        }
-      } else {
-        // Controls halfway between
-        c1X = sourceX + (targetX - sourceX) / 2;
-        c1Y = sourceY;
-        c2X = c1X;
-        c2Y = targetY;
-      }
-
-      // Make SVG path
-
-      var path = TheGraph.factories.edge.createEdgePathArray(sourceX, sourceY, c1X, c1Y, c2X, c2Y, targetX, targetY);
-      path = path.join(" ");
-
-      var backgroundPathOptions = TheGraph.merge(TheGraph.config.edge.backgroundPath, {
-        d: path
-      });
-      var backgroundPath = TheGraph.factories.edge.createEdgeBackgroundPath(backgroundPathOptions);
-
-      var foregroundPathClassName = TheGraph.config.edge.foregroundPath.className + this.props.route;
-      var foregroundPathOptions = TheGraph.merge(TheGraph.config.edge.foregroundPath, {
-        d: path,
-        className: foregroundPathClassName
-      });
-      var foregroundPath = TheGraph.factories.edge.createEdgeForegroundPath(foregroundPathOptions);
-
-      var touchPathOptions = TheGraph.merge(TheGraph.config.edge.touchPath, {
-        d: path
-      });
-      var touchPath = TheGraph.factories.edge.createEdgeTouchPath(touchPathOptions);
-
-      var containerOptions = {
-        className: "edge" +
-          (this.props.selected ? " selected" : "") +
-          (this.props.animated ? " animated" : ""),
-        title: this.props.label
-      };
-
-      containerOptions = TheGraph.merge(TheGraph.config.edge.container, containerOptions);
-
-      var epsilon = 0.01;
-      var center = findPointOnCubicBezier(0.5, sourceX, sourceY, c1X, c1Y, c2X, c2Y, targetX, targetY);
-
-      // estimate slope and intercept of tangent line
-      var getShiftedPoint = function (epsilon) {
-        return findPointOnCubicBezier(
-          0.5 + epsilon, sourceX, sourceY, c1X, c1Y, c2X, c2Y, targetX, targetY);
-      };
-      var plus = getShiftedPoint(epsilon);
-      var minus = getShiftedPoint(-epsilon);
-      var m = 1 * (plus[1] - minus[1]) / (plus[0] - minus[0]);
-      var b = center[1] - (m * center[0]);
-
-      // find point on line y = mx + b that is `offset` away from x,y
-      var findLinePoint = function (x, y, m, b, offset, flip) {
-        var x1 = x + offset / Math.sqrt(1 + m * m);
-        var y1;
-        if (Math.abs(m) === Infinity) {
-          y1 = y + (flip || 1) * offset;
-        } else {
-          y1 = (m * x1) + b;
-        }
-        return [x1, y1];
-      };
-
-      var arrowLength = 12;
-      // Which direction should arrow point
-      if (plus[0] > minus[0]) {
-        arrowLength *= -1;
-      }
-      center = findLinePoint(center[0], center[1], m, b, -1 * arrowLength / 2);
-
-      // find points of perpendicular line length l centered at x,y
-      var perpendicular = function (x, y, oldM, l) {
-        var m = -1 / oldM;
-        var b = y - m * x;
-        var point1 = findLinePoint(x, y, m, b, l / 2);
-        var point2 = findLinePoint(x, y, m, b, l / -2);
-        return [point1, point2];
-      };
-
-      var points = perpendicular(center[0], center[1], m, arrowLength * 0.9);
-      // For m === 0, figure out if arrow should be straight up or down
-      var flip = plus[1] > minus[1] ? -1 : 1;
-      var arrowTip = findLinePoint(center[0], center[1], m, b, arrowLength, flip);
-      points.push(arrowTip);
-
-      var pointsArray = points.map(
-        function (point) {
-          return point.join(',');
-        }).join(' ');
-      var arrowBg = TheGraph.factories.edge.createArrow({
-        points: pointsArray,
-        className: 'arrow-bg'
-      });
-
-      var arrow = TheGraph.factories.edge.createArrow({
-        points: pointsArray,
-        className: 'arrow fill route' + this.props.route
-      });
-
-      return TheGraph.factories.edge.createEdgeGroup(containerOptions, [backgroundPath, arrowBg, foregroundPath, touchPath, arrow]);
-    }
-  }));
-
+  const GraphEdge = require('./components/graph-edge')(TheGraph)
+  TheGraph.Edge = React.createFactory(GraphEdge);
 };
-},{}],61:[function(require,module,exports){
+},{"./components/graph-edge":54,"./config/edge":61,"./factories/edge":66}],78:[function(require,module,exports){
 module.exports.register = function (context) {
 
   var TheGraph = context.TheGraph;
@@ -17493,7 +18282,7 @@ module.exports.register = function (context) {
   }));
 
 };
-},{}],62:[function(require,module,exports){
+},{}],79:[function(require,module,exports){
 module.exports.register = function (context) {
 
   var TheGraph = context.TheGraph;
@@ -17677,7 +18466,7 @@ module.exports.register = function (context) {
 
 };
 
-},{}],63:[function(require,module,exports){
+},{}],80:[function(require,module,exports){
 module.exports.register = function (context) {
 
   var TheGraph = context.TheGraph;
@@ -17754,7 +18543,7 @@ module.exports.register = function (context) {
 
 };
 
-},{}],64:[function(require,module,exports){
+},{}],81:[function(require,module,exports){
 // Component library functionality
 function mergeComponentDefinition(component, definition) {
   // In cases where a component / subgraph ports change,
@@ -17904,304 +18693,20 @@ module.exports = {
   componentsFromGraph: componentsFromGraph,
 };
 
-},{}],65:[function(require,module,exports){
+},{}],82:[function(require,module,exports){
 module.exports.register = function (context) {
 
   var TheGraph = context.TheGraph;
 
-  TheGraph.config.menu = {
-    radius: 72,
-    positions: {
-      n4IconX: 0,
-      n4IconY: -52,
-      n4LabelX: 0,
-      n4LabelY: -35,
-      s4IconX: 0,
-      s4IconY: 52,
-      s4LabelX: 0,
-      s4LabelY: 35,
-      e4IconX: 45,
-      e4IconY: -5,
-      e4LabelX: 45,
-      e4LabelY: 15,
-      w4IconX: -45,
-      w4IconY: -5,
-      w4LabelX: -45,
-      w4LabelY: 15
-    },
-    container: {
-      className: "context-menu"
-    },
-    arcPath: {
-      className: "context-arc context-node-info-bg"
-    },
-    sliceIconText: {
-      className: "icon context-icon context-node-info-icon"
-    },
-    sliceLabelText: {
-      className: "context-arc-label"
-    },
-    sliceIconLabelText: {
-      className: "context-arc-icon-label"
-    },
-    circleXPath: {
-      className: "context-circle-x",
-      d: "M -51 -51 L 51 51 M -51 51 L 51 -51"
-    },
-    outlineCircle: {
-      className: "context-circle"
-    },
-    labelText: {
-      className: "context-node-label"
-    },
-    iconRect: {
-      className: "context-node-rect",
-      x: -24,
-      y: -24,
-      width: 48,
-      height: 48,
-      rx: TheGraph.config.nodeRadius,
-      ry: TheGraph.config.nodeRadius
-    }
-  };
+  TheGraph.config.menu = require('./config/menu')(TheGraph.config)
+  TheGraph.factories.menu = require('./factories/menu')(TheGraph)
 
-  TheGraph.factories.menu = {
-    createMenuGroup: TheGraph.factories.createGroup,
-    createMenuSlice: createMenuSlice,
-    createMenuSliceArcPath: TheGraph.factories.createPath,
-    createMenuSliceText: TheGraph.factories.createText,
-    createMenuSliceIconText: TheGraph.factories.createText,
-    createMenuSliceLabelText: TheGraph.factories.createText,
-    createMenuSliceIconLabelText: TheGraph.factories.createText,
-    createMenuCircleXPath: TheGraph.factories.createPath,
-    createMenuOutlineCircle: TheGraph.factories.createCircle,
-    createMenuLabelText: TheGraph.factories.createText,
-    createMenuMiddleIconRect: TheGraph.factories.createRect,
-    createMenuMiddleIconText: TheGraph.factories.createText
-  };
+  const GraphMenu = require('./components/graph-menu')
+  TheGraph.Menu = React.createFactory(GraphMenu);
 
-  function createMenuSlice(options) {
-    /*jshint validthis:true */
-    var direction = options.direction;
-    var arcPathOptions = TheGraph.merge(TheGraph.config.menu.arcPath, { d: TheGraph.arcs[direction] });
-    var children = [
-      TheGraph.factories.menu.createMenuSliceArcPath(arcPathOptions)
-    ];
-
-    if (this.props.menu[direction]) {
-      var slice = this.props.menu[direction];
-      if (slice.icon) {
-        var sliceIconTextOptions = {
-          x: TheGraph.config.menu.positions[direction+"IconX"],
-          y: TheGraph.config.menu.positions[direction+"IconY"],
-          children: TheGraph.FONT_AWESOME[ slice.icon ]
-        };
-        sliceIconTextOptions = TheGraph.merge(TheGraph.config.menu.sliceIconText, sliceIconTextOptions);
-        children.push(TheGraph.factories.menu.createMenuSliceIconText.call(this, sliceIconTextOptions));
-      }
-      if (slice.label) {
-        var sliceLabelTextOptions = {
-          x: TheGraph.config.menu.positions[direction+"IconX"],
-          y: TheGraph.config.menu.positions[direction+"IconY"],
-          children: slice.label
-        };
-        sliceLabelTextOptions = TheGraph.merge(TheGraph.config.menu.sliceLabelText, sliceLabelTextOptions);
-        children.push(TheGraph.factories.menu.createMenuSliceLabelText.call(this, sliceLabelTextOptions));
-      }
-      if (slice.iconLabel) {
-        var sliceIconLabelTextOptions = {
-          x: TheGraph.config.menu.positions[direction+"LabelX"],
-          y: TheGraph.config.menu.positions[direction+"LabelY"],
-          children: slice.iconLabel
-        };
-        sliceIconLabelTextOptions = TheGraph.merge(TheGraph.config.menu.sliceIconLabelText, sliceIconLabelTextOptions);
-        children.push(TheGraph.factories.menu.createMenuSliceIconLabelText.call(this, sliceIconLabelTextOptions));
-      }
-    }
-
-    var containerOptions = {
-      ref: direction,
-      className: "context-slice context-node-info" + (this.state[direction+"tappable"] ? " click" : ""),
-      children: children
-    };
-    containerOptions = TheGraph.merge(TheGraph.config.menu.container, containerOptions);
-    return TheGraph.factories.menu.createMenuGroup.call(this, containerOptions);
-  }
-
-  TheGraph.Menu = React.createFactory( React.createClass({
-    displayName: "TheGraphMenu",
-    radius: TheGraph.config.menu.radius,
-    getInitialState: function() {
-      // Use these in CSS for cursor and hover, and to attach listeners
-      return {
-        n4tappable: (this.props.menu.n4 && this.props.menu.n4.action),
-        s4tappable: (this.props.menu.s4 && this.props.menu.s4.action),
-        e4tappable: (this.props.menu.e4 && this.props.menu.e4.action),
-        w4tappable: (this.props.menu.w4 && this.props.menu.w4.action),
-      };
-    },
-    onTapN4: function () {
-      var options = this.props.options;
-      this.props.menu.n4.action(options.graph, options.itemKey, options.item);
-      this.props.triggerHideContext();
-    },
-    onTapS4: function () {
-      var options = this.props.options;
-      this.props.menu.s4.action(options.graph, options.itemKey, options.item);
-      this.props.triggerHideContext();
-    },
-    onTapE4: function () {
-      var options = this.props.options;
-      this.props.menu.e4.action(options.graph, options.itemKey, options.item);
-      this.props.triggerHideContext();
-    },
-    onTapW4: function () {
-      var options = this.props.options;
-      this.props.menu.w4.action(options.graph, options.itemKey, options.item);
-      this.props.triggerHideContext();
-    },
-    componentDidMount: function () {
-      if (this.state.n4tappable) {
-        this.refs.n4.addEventListener("up", this.onTapN4);
-      }
-      if (this.state.s4tappable) {
-        this.refs.s4.addEventListener("up", this.onTapS4);
-      }
-      if (this.state.e4tappable) {
-        this.refs.e4.addEventListener("up", this.onTapE4);
-      }
-      if (this.state.w4tappable) {
-        this.refs.w4.addEventListener("up", this.onTapW4);
-      }
-
-      // Prevent context menu
-      ReactDOM.findDOMNode(this).addEventListener("contextmenu", function (event) {
-        if (event) {
-          event.stopPropagation();
-          event.preventDefault();
-        }
-      }, false);
-    },
-    getPosition: function () {
-      return {
-        x: this.props.x !== undefined ? this.props.x : this.props.options.x || 0,
-        y: this.props.y !== undefined ? this.props.y : this.props.options.y || 0
-      };
-    },
-    render: function() {
-      var menu = this.props.menu;
-      var options = this.props.options;
-      var position = this.getPosition();
-
-      var circleXOptions = TheGraph.merge(TheGraph.config.menu.circleXPath, {});
-      var outlineCircleOptions = TheGraph.merge(TheGraph.config.menu.outlineCircle, {r: this.radius });
-
-      var children = [
-        // Directional slices
-        TheGraph.factories.menu.createMenuSlice.call(this, { direction: "n4" }),
-        TheGraph.factories.menu.createMenuSlice.call(this, { direction: "s4" }),
-        TheGraph.factories.menu.createMenuSlice.call(this, { direction: "e4" }),
-        TheGraph.factories.menu.createMenuSlice.call(this, { direction: "w4" }),
-        // Outline and X
-        TheGraph.factories.menu.createMenuCircleXPath.call(this, circleXOptions),
-        TheGraph.factories.menu.createMenuOutlineCircle.call(this, outlineCircleOptions)
-      ];
-      // Menu label
-      if (this.props.label || menu.icon) {
-
-        var labelTextOptions = {
-          x: 0,
-          y: 0 - this.radius - 15,
-          children: (this.props.label ? this.props.label : menu.label)
-        };
-
-        labelTextOptions = TheGraph.merge(TheGraph.config.menu.labelText, labelTextOptions);
-        children.push(TheGraph.factories.menu.createMenuLabelText.call(this, labelTextOptions));
-      }
-      // Middle icon
-      if (this.props.icon || menu.icon) {
-        var iconColor = (this.props.iconColor!==undefined ? this.props.iconColor : menu.iconColor);
-        var iconStyle = "";
-        if (iconColor) {
-          iconStyle = " fill route"+iconColor;
-        }
-
-        var middleIconRectOptions = TheGraph.merge(TheGraph.config.menu.iconRect, {});
-        var middleIcon = TheGraph.factories.menu.createMenuMiddleIconRect.call(this, middleIconRectOptions);
-
-        var middleIconTextOptions = {
-          className: "icon context-node-icon"+iconStyle,
-          children: TheGraph.FONT_AWESOME[ (this.props.icon ? this.props.icon : menu.icon) ]
-        };
-        middleIconTextOptions = TheGraph.merge(TheGraph.config.menu.iconText, middleIconTextOptions);
-        var iconText = TheGraph.factories.menu.createMenuMiddleIconText.call(this, middleIconTextOptions);
-
-        children.push(middleIcon, iconText);
-      }
-
-      var containerOptions = {
-        transform: "translate("+position.x+","+position.y+")",
-        children: children
-      };
-
-      containerOptions = TheGraph.merge(TheGraph.config.menu.container, containerOptions);
-      return TheGraph.factories.menu.createMenuGroup.call(this, containerOptions);
-
-    }
-  }));
-
-  TheGraph.config.modalBG = {
-    container: {},
-    rect: {
-      ref: "rect",
-      className: "context-modal-bg"
-    }
-  };
-
-  TheGraph.factories.modalBG = {
-    createModalBackgroundGroup: TheGraph.factories.createGroup,
-    createModalBackgroundRect: TheGraph.factories.createRect
-  };
-
-
-  TheGraph.ModalBG = React.createFactory( React.createClass({
-    displayName: "TheGraphModalBG",
-    componentDidMount: function () {
-      var domNode = ReactDOM.findDOMNode(this);
-      var rectNode = this.refs.rect; 
-
-      // Right-click on another item will show its menu
-      domNode.addEventListener("down", function (event) {
-        // Only if outside of menu
-        if (event && event.target===rectNode) {
-          this.hideModal();
-        }
-      }.bind(this));
-    },
-    hideModal: function (event) {
-      this.props.triggerHideContext();
-    },
-    render: function () {
-
-
-      var rectOptions = {
-        width: this.props.width,
-        height: this.props.height
-      };
-
-      rectOptions = TheGraph.merge(TheGraph.config.modalBG.rect, rectOptions);
-      var rect = TheGraph.factories.modalBG.createModalBackgroundRect.call(this, rectOptions);
-
-      var containerContents = [rect, this.props.children];
-      var containerOptions = TheGraph.merge(TheGraph.config.modalBG.container, {});
-      return TheGraph.factories.modalBG.createModalBackgroundGroup.call(this, containerOptions, containerContents);
-    }
-  }));
-
-
+  require('./menu/modal-bg')(TheGraph)
 };
-
-},{}],66:[function(require,module,exports){
+},{"./components/graph-menu":55,"./config/menu":62,"./factories/menu":67,"./menu/modal-bg":72}],83:[function(require,module,exports){
 module.exports.register = function (context) {
 
   var TheGraph = context.TheGraph;
@@ -18298,7 +18803,7 @@ module.exports.register = function (context) {
 
 };
 
-},{}],67:[function(require,module,exports){
+},{}],84:[function(require,module,exports){
 module.exports.register = function (context) {
 
   var TheGraph = context.TheGraph;
@@ -18397,7 +18902,7 @@ module.exports.register = function (context) {
 
 };
 
-},{}],68:[function(require,module,exports){
+},{}],85:[function(require,module,exports){
 module.exports.register = function (context) {
 
   var TheGraph = context.TheGraph;
@@ -18429,476 +18934,57 @@ module.exports.register = function (context) {
     return TheGraph.Menu(options);
   }
 
-  TheGraph.NodeMenu = React.createFactory( React.createClass({
-    displayName: "TheGraphNodeMenu",
-    radius: 72,
-    stopPropagation: function (event) {
-      // Don't drag graph
-      event.stopPropagation();
-    },
-    componentDidMount: function () {
-      // Prevent context menu
-      ReactDOM.findDOMNode(this).addEventListener("contextmenu", function (event) {
-        event.stopPropagation();
-        event.preventDefault();
-      }, false);
-    },
-    render: function() {
-      var scale = this.props.node.props.app.state.scale;
-      var ports = this.props.ports;
-      var deltaX = this.props.deltaX;
-      var deltaY = this.props.deltaY;
-
-      var inportsOptions = {
-        ports: ports.inports,
-        isIn: true,
-        scale: scale,
-        processKey: this.props.processKey,
-        deltaX: deltaX,
-        deltaY: deltaY,
-        nodeWidth: this.props.nodeWidth,
-        nodeHeight: this.props.nodeHeight,
-        highlightPort: this.props.highlightPort
-      };
-
-      inportsOptions = TheGraph.merge(TheGraph.config.nodeMenu.inports, inportsOptions);
-      var inports = TheGraph.factories.nodeMenu.createNodeMenuInports.call(this, inportsOptions);
-
-      var outportsOptions = {
-        ports: ports.outports,
-        isIn: false,
-        scale: scale,
-        processKey: this.props.processKey,
-        deltaX: deltaX,
-        deltaY: deltaY,
-        nodeWidth: this.props.nodeWidth,
-        nodeHeight: this.props.nodeHeight,
-        highlightPort: this.props.highlightPort
-      };
-
-      outportsOptions = TheGraph.merge(TheGraph.config.nodeMenu.outports, outportsOptions);
-      var outports = TheGraph.factories.nodeMenu.createNodeMenuOutports.call(this, outportsOptions);
-
-      var menuOptions = {
-        menu: this.props.menu,
-        options: this.props.options,
-        triggerHideContext: this.props.triggerHideContext,
-        icon: this.props.icon,
-        label: this.props.label
-      };
-
-      menuOptions = TheGraph.merge(TheGraph.config.nodeMenu.menu, menuOptions);
-      var menu = TheGraph.factories.nodeMenu.createNodeMenuMenu.call(this, menuOptions);
-
-      var children = [
-        inports, outports, menu
-      ];
-
-      var containerOptions = {
-        transform: "translate("+this.props.x+","+this.props.y+")",
-        children: children
-      };
-      containerOptions = TheGraph.merge(TheGraph.config.nodeMenu.container, containerOptions);
-      return TheGraph.factories.nodeMenu.createNodeMenuGroup.call(this, containerOptions);
-
-    }
-  }));
-
-
+  const GraphNodeMenu = require('./components/graph-node-menu')
+  TheGraph.NodeMenu = React.createFactory(GraphNodeMenu);
 };
-
-},{}],69:[function(require,module,exports){
+},{"./components/graph-node-menu":56}],86:[function(require,module,exports){
 module.exports.register = function (context) {
 
   var TheGraph = context.TheGraph;
 
   // Initialize namespace for configuration and factory functions.
-  TheGraph.config.node = {
-    snap: TheGraph.config.nodeSize,
-    container: {},
-    background: {
-      className: "node-bg"
-    },
-    border: {
-      className: "node-border drag",
-      rx: TheGraph.config.nodeRadius,
-      ry: TheGraph.config.nodeRadius
-    },
-    innerRect: {
-      className: "node-rect drag",
-      x: 3,
-      y: 3,
-      rx: TheGraph.config.nodeRadius - 2,
-      ry: TheGraph.config.nodeRadius - 2
-    },
-    icon: {
-      ref: "icon",
-      className: "icon node-icon drag"
-    },
-    iconsvg: {
-      className: "icon node-icon drag"
-    },
-    inports: {
-      className: "inports"
-    },
-    outports: {
-      className: "outports"
-    },
-    labelBackground: {
-      className: "node-label-bg"
-    },
-    labelRect: {
-      className: "text-bg-rect"
-    },
-    labelText: {
-      className: "node-label"
-    },
-    sublabelBackground: {
-      className: "node-sublabel-bg"
-    },
-    sublabelRect: {
-      className: "text-bg-rect"
-    },
-    sublabelText: {
-      className: "node-sublabel"
-    }
-  };
+  TheGraph.config.node = require('./config/node')(TheGraph.config)
 
   // These factories use generic factories from the core, but
   // each is called separately allowing developers to intercept
   // individual elements of the node creation.
-  TheGraph.factories.node = {
-    createNodeGroup: TheGraph.factories.createGroup,
-    createNodeBackgroundRect: TheGraph.factories.createRect,
-    createNodeBorderRect: TheGraph.factories.createRect,
-    createNodeInnerRect: TheGraph.factories.createRect,
-    createNodeIconText: TheGraph.factories.createText,
-    createNodeIconSVG: TheGraph.factories.createImg,
-    createNodeInportsGroup: TheGraph.factories.createGroup,
-    createNodeOutportsGroup: TheGraph.factories.createGroup,
-    createNodeLabelGroup: TheGraph.factories.createGroup,
-    createNodeLabelRect: TheGraph.factories.createRect,
-    createNodeLabelText: TheGraph.factories.createText,
-    createNodeSublabelGroup: TheGraph.factories.createGroup,
-    createNodeSublabelRect: TheGraph.factories.createRect,
-    createNodeSublabelText: TheGraph.factories.createText,
-    createNodePort: createNodePort
-  };
-
-  function createNodePort(options) {
-    // console.log('createNodePort', options)
-    return TheGraph.Port(options);
-  }
+  TheGraph.factories.node = require('./factories/node')(TheGraph)
 
   // PolymerGestures monkeypatch
-  function patchGestures() {
-    // console.log('patchGestures: currently disabled :(')
-    // Polymer.Gestures.
+  // Deprecated!!
+  function patchGestures() {}
 
-    // DEPRECATED!!!
-    // PolymerGestures.dispatcher.gestures.forEach( function (gesture) {
-    //   // hold
-    //   if (gesture.HOLD_DELAY) {
-    //     gesture.HOLD_DELAY = 500;
-    //   }
-    //   // track
-    //   if (gesture.WIGGLE_THRESHOLD) {
-    //     gesture.WIGGLE_THRESHOLD = 8;
-    //   }
-    // });
-  }
-
-  // const GraphNode = require('./components/graph-node')
-  const GraphNode = require('./components/graph-node-class')
+  const GraphNode = require('./components/graph-node')
 
   // Node view
   TheGraph.Node = React.createFactory(GraphNode);
 };
-},{"./components/graph-node-class":54}],70:[function(require,module,exports){
+},{"./components/graph-node":57,"./config/node":63,"./factories/node":68}],87:[function(require,module,exports){
 module.exports.register = function (context) {
 
   var TheGraph = context.TheGraph;
 
   // Initialize configuration for the Port view.
-  TheGraph.config.port = {
-    container: {
-      className: "port arrow"
-    },
-    backgroundCircle: {
-      className: "port-circle-bg"
-    },
-    arc: {
-      className: "port-arc"
-    },
-    innerCircle: {
-      ref: "circleSmall"
-    },
-    text: {
-      ref: "label",
-      className: "port-label drag"
-    }
-  };
-
-  TheGraph.factories.port = {
-    createPortGroup: TheGraph.factories.createGroup,
-    createPortBackgroundCircle: TheGraph.factories.createCircle,
-    createPortArc: TheGraph.factories.createPath,
-    createPortInnerCircle: TheGraph.factories.createCircle,
-    createPortLabelText: TheGraph.factories.createText
-  };
+  TheGraph.config.port = require('./config/port')
+  TheGraph.factories.port = require('./factories/port')(TheGraph.factories)
 
   // Port view
-
-  TheGraph.Port = React.createFactory(React.createClass({
-    displayName: "TheGraphPort",
-    mixins: [
-      TheGraph.mixins.Tooltip
-    ],
-    componentDidMount: function () {
-      let node = ReactDOM.findDOMNode(this);
-      // Preview edge start
-      node.addEventListener("tap", this.edgeStart);
-      // Make edge
-      node.addEventListener("track", this.trackHandler);
-      node.addEventListener("the-graph-edge-drop", this.edgeStart);
-
-      // Show context menu
-      if (this.props.showContext) {
-        node.addEventListener("contextmenu", this.showContext);
-        node.addEventListener("hold", this.showContext);
-      }
-    },
-    trackHandler: function (event) {
-      // Don't fire on graph
-      event.stopPropagation();
-      let detail = event.detail
-      switch (detail.state) {
-        case 'start':
-          this.edgeStart(event);
-          break;
-        case 'track':
-          // this._onTrack(event);
-          break;
-        case 'end':
-          let hoverElem = detail.hover()
-          event.relatedTarget = hoverElem
-          this.triggerDropOnTarget(event);
-          break;
-      }
-    },
-
-    getTooltipTrigger: function () {
-      return ReactDOM.findDOMNode(this);
-    },
-    shouldShowTooltip: function () {
-      return (
-        this.props.app.state.scale < TheGraph.zbpBig ||
-        this.props.label.length > 8
-      );
-    },
-    showContext: function (event) {
-      // Don't show port menu on export node port
-      if (this.props.isExport) {
-        return;
-      }
-      // Click on label, pass context menu to node
-      if (event && (event.target === ReactDOM.findDOMNode(this.refs.label))) {
-        return;
-      }
-      // Don't show native context menu
-      event.preventDefault();
-
-      // Don't tap graph on hold event
-      event.stopPropagation();
-      if (event.preventTap) {
-        event.preventTap();
-      }
-
-      // Get mouse position
-      var x = event.x || event.clientX || 0;
-      var y = event.y || event.clientY || 0;
-
-      // App.showContext
-      this.props.showContext({
-        element: this,
-        type: (this.props.isIn ? "nodeInport" : "nodeOutport"),
-        x: x,
-        y: y,
-        graph: this.props.graph,
-        itemKey: this.props.label,
-        item: this.props.port
-      });
-    },
-    getContext: function (menu, options, hide) {
-      return TheGraph.Menu({
-        menu: menu,
-        options: options,
-        label: this.props.label,
-        triggerHideContext: hide
-      });
-    },
-    edgeStart: function (event) {
-      // Don't start edge on export node port
-      if (this.props.isExport) {
-        return;
-      }
-
-      // Click on label, pass context menu to node
-      if (event && (event.target === ReactDOM.findDOMNode(this.refs.label))) {
-        return;
-      }
-      // Don't tap graph
-      event.stopPropagation();
-      var edgeStartEvent = new CustomEvent('the-graph-edge-start', {
-        detail: {
-          isIn: this.props.isIn,
-          port: this.props.port,
-          // process: this.props.processKey,
-          route: this.props.route
-        },
-        bubbles: true
-      });
-      let node = ReactDOM.findDOMNode(this)
-      node.dispatchEvent(edgeStartEvent);
-    },
-    triggerDropOnTarget: function (event) {
-      let sourceEvent = event.detail.sourceEvent
-
-      // throw new Error('fuck')
-      // If dropped on a child element will bubble up to port
-
-      // "relatedTarget", optional and defaulting to null, of type EventTarget,
-      // that is the element just left (in case of  a mouseenter or mouseover)
-      // or is entering (in case of a mouseout or mouseleave).
-      var target = event.relatedTarget // || sourceEvent.toElement || sourceEvent.fromElement
-      if (!target) {
-        return;
-      }
-      var dropEvent = new CustomEvent('the-graph-edge-drop', {
-        detail: null,
-        bubbles: true
-      });
-      let targetNode = target
-      targetNode.dispatchEvent(dropEvent);
-    },
-    render: function () {
-      var style;
-      if (this.props.label.length > 7) {
-        var fontSize = 6 * (30 / (4 * this.props.label.length));
-        style = {
-          'fontSize': fontSize + 'px'
-        };
-      }
-      var r = 4;
-      // Highlight matching ports
-      var highlightPort = this.props.highlightPort;
-      var inArc = TheGraph.arcs.inport;
-      var outArc = TheGraph.arcs.outport;
-      if (highlightPort && highlightPort.isIn === this.props.isIn && (highlightPort.type === this.props.port.type || this.props.port.type === 'any')) {
-        r = 6;
-        inArc = TheGraph.arcs.inportBig;
-        outArc = TheGraph.arcs.outportBig;
-      }
-
-      var backgroundCircleOptions = TheGraph.merge(TheGraph.config.port.backgroundCircle, {
-        r: r + 1
-      });
-      var backgroundCircle = TheGraph.factories.port.createPortBackgroundCircle.call(this, backgroundCircleOptions);
-
-      var arcOptions = TheGraph.merge(TheGraph.config.port.arc, {
-        d: (this.props.isIn ? inArc : outArc)
-      });
-      var arc = TheGraph.factories.port.createPortArc.call(this, arcOptions);
-
-      var innerCircleOptions = {
-        className: "port-circle-small fill route" + this.props.route,
-        r: r // - 0.5
-      };
-
-      innerCircleOptions = TheGraph.merge(TheGraph.config.port.innerCircle, innerCircleOptions);
-      var innerCircle = TheGraph.factories.port.createPortInnerCircle.call(this, innerCircleOptions);
-
-      var labelTextOptions = {
-        x: (this.props.isIn ? 5 : -5),
-        style: style,
-        children: this.props.label
-      };
-      labelTextOptions = TheGraph.merge(TheGraph.config.port.text, labelTextOptions);
-      var labelText = TheGraph.factories.port.createPortLabelText.call(this, labelTextOptions);
-
-      var portContents = [
-        backgroundCircle,
-        arc,
-        innerCircle,
-        labelText
-      ];
-
-      var containerOptions = TheGraph.merge(TheGraph.config.port.container, {
-        title: this.props.label,
-        transform: "translate(" + this.props.x + "," + this.props.y + ")"
-      });
-      return TheGraph.factories.port.createPortGroup.call(this, containerOptions, portContents);
-
-    }
-  }));
+  const GraphPort = require('./components/graph-port')
+  TheGraph.Port = React.createFactory(GraphPort);
 
 
 };
-},{}],71:[function(require,module,exports){
+},{"./components/graph-port":58,"./config/port":64,"./factories/port":69}],88:[function(require,module,exports){
 module.exports.register = function (context) {
-
   var TheGraph = context.TheGraph;
-
-  TheGraph.config.tooltip = {
-    container: {},
-    rect: {
-      className: "tooltip-bg",
-      x: 0,
-      y: -7,
-      rx: 3,
-      ry: 3,
-      height: 16
-    },
-    text: {
-      className: "tooltip-label",
-      ref: "label"
-    }
-  };
-
-  TheGraph.factories.tooltip = {
-    createTooltipGroup: TheGraph.factories.createGroup,
-    createTooltipRect: TheGraph.factories.createRect,
-    createTooltipText: TheGraph.factories.createText
-  };
+  TheGraph.config.tooltip = require('./config/tooltip')
+  TheGraph.factories.tooltip = require('./factories/tooltip')(TheGraph.factories)
 
   // Port view
-
-  TheGraph.Tooltip = React.createFactory( React.createClass({
-    displayName: "TheGraphTooltip",
-    render: function() {
-
-      var rectOptions = TheGraph.merge(TheGraph.config.tooltip.rect, {width: this.props.label.length * 6});
-      var rect = TheGraph.factories.tooltip.createTooltipRect.call(this, rectOptions);
-
-      var textOptions = TheGraph.merge(TheGraph.config.tooltip.text, { children: this.props.label });
-      var text = TheGraph.factories.tooltip.createTooltipText.call(this, textOptions);
-
-      var containerContents = [rect, text];
-
-      var containerOptions = {
-        className: "tooltip" + (this.props.visible ? "" : " hidden"),
-        transform: "translate("+this.props.x+","+this.props.y+")",
-      };
-      containerOptions = TheGraph.merge(TheGraph.config.tooltip.container, containerOptions);
-      return TheGraph.factories.tooltip.createTooltipGroup.call(this, containerOptions, containerContents);
-
-    }
-  }));
-
-
+  const GraphTooltip = require('./components/graph-tooltip')
+  TheGraph.Tooltip = React.createFactory(GraphTooltip);
 };
-
-},{}],72:[function(require,module,exports){
+},{"./components/graph-tooltip":59,"./config/tooltip":65,"./factories/tooltip":70}],89:[function(require,module,exports){
 module.exports.register = function (context) {
 
   var defaultNodeSize = 72;
@@ -19339,7 +19425,7 @@ module.exports.register = function (context) {
   };
 
 };
-},{"./mixins/tooltip":56}],73:[function(require,module,exports){
+},{"./mixins/tooltip":73}],90:[function(require,module,exports){
 var mixin = require('smart-mixin');
 var assign = require('object-assign');
 
@@ -19522,9 +19608,9 @@ module.exports = (function () {
 
   return reactMixin;
 })();
-},{"object-assign":74,"smart-mixin":75}],74:[function(require,module,exports){
+},{"object-assign":91,"smart-mixin":92}],91:[function(require,module,exports){
 arguments[4][18][0].apply(exports,arguments)
-},{"dup":18}],75:[function(require,module,exports){
+},{"dup":18}],92:[function(require,module,exports){
 function objToStr(x){ return Object.prototype.toString.call(x); };
 
 function returner(x) { return x; }

@@ -1,41 +1,44 @@
-// const reactMixin = require('react-mixin');
-// reactMixin(GraphNode.prototype, someMixin);
+const reactMixin = require('react-mixin');
+const Component = require('react').Component
 
-var ToolTipMixin = require('../mixins/tooltip')
+class GraphNode extends Component {
+  // static displayName = 'TheGraphNode';
+  get displayName() {
+    return 'TheGraphNode'
+  }
 
-// class GraphNode
-module.exports = React.createClass({
-  displayName: "TheGraphNode",
-  mixins: [
-    ToolTipMixin
-  ],
-  componentDidMount: function () {
+  _addEventListener(node, event, handler, ...args) {
+    node.addEventListener(event, handler.bind(this), ...args);
+  }
+
+  componentDidMount() {
     // patchGestures();
     var domNode = ReactDOM.findDOMNode(this);
 
     // Dragging
-    domNode.addEventListener("track", this.trackHandler);
+    this._addEventListener(domNode, 'track', this.trackHandler);
 
     // Tap to select
     if (this.props.onNodeSelection) {
-      domNode.addEventListener("tap", this.onNodeSelection, true);
+      this._addEventListener(domNode, 'tap', this.onNodeSelection, true);
     }
 
     // Context menu
     if (this.props.showContext) {
-      domNode.addEventListener("contextmenu", this.showContext);
-      domNode.addEventListener("hold", this.showContext);
+      this._addEventListener(domNode, 'contextmenu', this.showContext);
+      this._addEventListener(domNode, 'hold', this.showContext);
     }
-  },
-  onNodeSelection: function (event) {
+  }
+
+  onNodeSelection(event) {
     // Don't tap app (unselect)
     event.stopPropagation();
 
-    var toggle = (TheGraph.metaKeyPressed || event.pointerType === "touch");
+    var toggle = (TheGraph.metaKeyPressed || event.pointerType === 'touch');
     this.props.onNodeSelection(this.props.nodeID, this.props.node, toggle);
-  },
+  }
 
-  _onTrackStart: function (event) {
+  _onTrackStart(event) {
     // state — a string indicating the tracking state:
     //  start — fired when tracking is first detected (finger/button down and moved past a pre-set distance threshold)
     //  track — fired while tracking
@@ -63,8 +66,9 @@ module.exports = React.createClass({
     } else {
       this.props.graph.startTransaction('movenode');
     }
-  },
-  trackHandler: function (event) {
+  }
+
+  trackHandler(event) {
     // Don't fire on graph
     event.stopPropagation();
     switch (event.detail.state) {
@@ -78,9 +82,9 @@ module.exports = React.createClass({
         this._onTrackEnd(event);
         break;
     }
-  },
+  }
 
-  _onTrack: function (event) {
+  _onTrack(event) {
     var scale = this.props.app.state.scale;
     var detail = event.detail
     var deltaX = Math.round(detail.ddx / scale);
@@ -103,8 +107,9 @@ module.exports = React.createClass({
     } else {
       this.props.graph.setNodeMetadata(this.props.nodeID, newPos);
     }
-  },
-  _onTrackEnd: function (event) {
+  }
+
+  _onTrackEnd(event) {
     // Don't fire on graph
     event.stopPropagation();
 
@@ -139,8 +144,9 @@ module.exports = React.createClass({
     } else {
       this.props.graph.endTransaction('movenode');
     }
-  },
-  showContext: function (event) {
+  }
+
+  showContext(event) {
     // Don't show native context menu
     event.preventDefault();
 
@@ -157,15 +163,15 @@ module.exports = React.createClass({
     // App.showContext
     this.props.showContext({
       element: this,
-      type: (this.props.export ? (this.props.isIn ? "graphInport" : "graphOutport") : "node"),
+      type: (this.props.export ? (this.props.isIn ? 'graphInport' : 'graphOutport') : 'node'),
       x: x,
       y: y,
       graph: this.props.graph,
       itemKey: (this.props.export ? this.props.exportKey : this.props.nodeID),
       item: (this.props.export ? this.props.export : this.props.node)
     });
-  },
-  getContext: function (menu, options, hide) {
+  }
+  getContext(menu, options, hide) {
     // If this node is an export
     if (this.props.export) {
       return TheGraph.Menu({
@@ -248,14 +254,17 @@ module.exports = React.createClass({
       deltaY: deltaY,
       highlightPort: highlightPort
     });
-  },
-  getTooltipTrigger: function () {
+  }
+
+  getTooltipTrigger() {
     return ReactDOM.findDOMNode(this);
-  },
-  shouldShowTooltip: function () {
+  }
+
+  shouldShowTooltip() {
     return (this.props.app.state.scale < TheGraph.zbpNormal);
-  },
-  shouldComponentUpdate: function (nextProps, nextState) {
+  }
+
+  shouldComponentUpdate(nextProps, nextState) {
     // Only rerender if changed
     return (
       nextProps.x !== this.props.x ||
@@ -269,8 +278,9 @@ module.exports = React.createClass({
       nextProps.highlightPort !== this.props.highlightPort ||
       nextProps.ports.dirty === true
     );
-  },
-  render: function () {
+  }
+
+  render() {
     if (this.props.ports.dirty) {
       // This tag is set when an edge or iip changes port colors
       this.props.ports.dirty = false;
@@ -279,7 +289,7 @@ module.exports = React.createClass({
     var label = this.props.label;
     var sublabel = this.props.sublabel;
     if (!sublabel || sublabel === label) {
-      sublabel = "";
+      sublabel = '';
     }
     var x = this.props.x;
     var y = this.props.y;
@@ -307,7 +317,7 @@ module.exports = React.createClass({
         app: app,
         graph: graph,
         node: node,
-        key: processKey + ".in." + info.label,
+        key: processKey + '.in.' + info.label,
         label: info.label,
         processKey: processKey,
         isIn: true,
@@ -340,7 +350,7 @@ module.exports = React.createClass({
         app: app,
         graph: graph,
         node: node,
-        key: processKey + ".out." + info.label,
+        key: processKey + '.out.' + info.label,
         label: info.label,
         processKey: processKey,
         isIn: false,
@@ -370,7 +380,7 @@ module.exports = React.createClass({
     }
 
     var iconContent;
-    if (this.props.iconsvg && this.props.iconsvg !== "") {
+    if (this.props.iconsvg && this.props.iconsvg !== '') {
       var iconSVGOptions = TheGraph.merge(TheGraph.config.node.iconsvg, {
         src: this.props.iconsvg,
         x: TheGraph.config.nodeRadius - 4,
@@ -456,19 +466,19 @@ module.exports = React.createClass({
     ];
 
     var nodeOptions = {
-      className: "node drag" +
-        (this.props.selected ? " selected" : "") +
-        (this.props.error ? " error" : ""),
+      className: 'node drag' +
+        (this.props.selected ? ' selected' : '') +
+        (this.props.error ? ' error' : ''),
       name: this.props.nodeID,
       key: this.props.nodeID,
       title: label,
-      transform: "translate(" + x + "," + y + ")"
+      transform: 'translate(' + x + ',' + y + ')'
     };
     nodeOptions = TheGraph.merge(TheGraph.config.node.container, nodeOptions);
 
     return TheGraph.factories.node.createNodeGroup.call(this, nodeOptions, nodeContents);
   }
-})
+}
 
 function buildLabelRectOptions(height, x, y, len, className) {
 
@@ -489,3 +499,8 @@ function buildLabelRectOptions(height, x, y, len, className) {
 
   return result;
 }
+
+var ToolTipMixin = require('../mixins/tooltip')
+reactMixin.bindClass(GraphNode, ToolTipMixin)
+
+module.exports = GraphNode
