@@ -2,24 +2,7 @@ module.exports.register = function (context) {
 
   var TheGraph = context.TheGraph;
 
-  TheGraph.config.group = {
-    container: {
-      className: "group"
-    },
-    boxRect: {
-      ref: "box",
-      rx: TheGraph.config.nodeRadius,
-      ry: TheGraph.config.nodeRadius
-    },
-    labelText: {
-      ref: "label",
-      className: "group-label drag"
-    },
-    descriptionText: {
-      className: "group-description"
-    }
-  };
-
+  TheGraph.config.group = require('./factories/group')(TheGraph.config)
   TheGraph.factories.group = {
     createGroupGroup: TheGraph.factories.createGroup,
     createGroupBoxRect: TheGraph.factories.createRect,

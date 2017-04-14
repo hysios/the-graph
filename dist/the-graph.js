@@ -13597,7 +13597,7 @@ console.log('DONE CONFIGURE')
 console.log('TheGraph', g.TheGraph)
 
 module.exports = g.TheGraph;
-},{"./the-graph-editor/the-graph-editor.js":51,"./the-graph-nav/the-graph-nav.js":52,"./the-graph-thumb/the-graph-thumb.js":53,"./the-graph/font-awesome-unicode-map.js":77,"./the-graph/the-graph-app.js":80,"./the-graph/the-graph-autolayout.js":81,"./the-graph/the-graph-clipboard.js":82,"./the-graph/the-graph-edge.js":83,"./the-graph/the-graph-graph.js":84,"./the-graph/the-graph-group.js":85,"./the-graph/the-graph-iip.js":86,"./the-graph/the-graph-library.js":87,"./the-graph/the-graph-menu.js":88,"./the-graph/the-graph-node-menu-port.js":89,"./the-graph/the-graph-node-menu-ports.js":90,"./the-graph/the-graph-node-menu.js":91,"./the-graph/the-graph-node.js":92,"./the-graph/the-graph-port.js":93,"./the-graph/the-graph-tooltip.js":94,"./the-graph/the-graph.js":95,"fbp-graph":9}],51:[function(require,module,exports){
+},{"./the-graph-editor/the-graph-editor.js":51,"./the-graph-nav/the-graph-nav.js":52,"./the-graph-thumb/the-graph-thumb.js":53,"./the-graph/font-awesome-unicode-map.js":81,"./the-graph/the-graph-app.js":84,"./the-graph/the-graph-autolayout.js":85,"./the-graph/the-graph-clipboard.js":86,"./the-graph/the-graph-edge.js":87,"./the-graph/the-graph-graph.js":88,"./the-graph/the-graph-group.js":89,"./the-graph/the-graph-iip.js":90,"./the-graph/the-graph-library.js":91,"./the-graph/the-graph-menu.js":92,"./the-graph/the-graph-node-menu-port.js":93,"./the-graph/the-graph-node-menu-ports.js":94,"./the-graph/the-graph-node-menu.js":95,"./the-graph/the-graph-node.js":96,"./the-graph/the-graph-port.js":97,"./the-graph/the-graph-tooltip.js":98,"./the-graph/the-graph.js":99,"fbp-graph":9}],51:[function(require,module,exports){
 
 // Returns a new datastructure to prevent accidental sharing between diffent editor instances
 function getDefaultMenus(editor) {
@@ -14096,6 +14096,618 @@ module.exports = {
 };
 
 },{}],54:[function(require,module,exports){
+var mixins = [];
+if (window.React.Animate) {
+  mixins.push(React.Animate);
+}
+
+module.exports = TheGraph => {
+  return React.createClass({
+    displayName: "TheGraphApp",
+    mixins: mixins,
+    getInitialState: function () {
+      // Autofit
+      var fit = TheGraph.findFit(this.props.graph, this.props.width, this.props.height);
+
+      return {
+        x: fit.x,
+        y: fit.y,
+        scale: fit.scale,
+        width: this.props.width,
+        height: this.props.height,
+        minZoom: this.props.minZoom,
+        maxZoom: this.props.maxZoom,
+        tooltip: "",
+        tooltipX: 0,
+        tooltipY: 0,
+        tooltipVisible: false,
+        contextElement: null,
+        contextType: null,
+        offsetY: this.props.offsetY,
+        offsetX: this.props.offsetX
+      };
+    },
+    zoomFactor: 0,
+    zoomX: 0,
+    zoomY: 0,
+    onWheel: function (event) {
+      // Don't bounce
+      event.preventDefault();
+
+      if (!this.zoomFactor) { // WAT
+        this.zoomFactor = 0;
+      }
+
+      // Safari is wheelDeltaY
+      this.zoomFactor += event.deltaY ? event.deltaY : 0 - event.wheelDeltaY;
+      this.zoomX = event.clientX;
+      this.zoomY = event.clientY;
+      requestAnimationFrame(this.scheduleWheelZoom);
+    },
+    scheduleWheelZoom: function () {
+      if (isNaN(this.zoomFactor)) {
+        return;
+      }
+
+      // Speed limit
+      var zoomFactor = this.zoomFactor / -500;
+      zoomFactor = Math.min(0.5, Math.max(-0.5, zoomFactor));
+      var scale = this.state.scale + (this.state.scale * zoomFactor);
+      this.zoomFactor = 0;
+
+      if (scale < this.state.minZoom) {
+        scale = this.state.minZoom;
+      } else if (scale > this.state.maxZoom) {
+        scale = this.state.maxZoom;
+      }
+      if (scale === this.state.scale) {
+        return;
+      }
+
+      // Zoom and pan transform-origin equivalent
+      var scaleD = scale / this.state.scale;
+      var currentX = this.state.x;
+      var currentY = this.state.y;
+      var oX = this.zoomX;
+      var oY = this.zoomY;
+      var x = scaleD * (currentX - oX) + oX;
+      var y = scaleD * (currentY - oY) + oY;
+
+      this.setState({
+        scale: scale,
+        x: x,
+        y: y,
+        tooltipVisible: false
+      });
+    },
+    lastScale: 1,
+    lastX: 0,
+    lastY: 0,
+    pinching: false,
+    onTransformStart: function (event) {
+      // Don't drag nodes
+      event.srcEvent.stopPropagation();
+      event.srcEvent.stopImmediatePropagation();
+
+      // Hammer.js
+      this.lastScale = 1;
+      this.lastX = event.center.x;
+      this.lastY = event.center.y;
+      this.pinching = true;
+    },
+    onTransform: function (event) {
+      // Don't drag nodes
+      event.srcEvent.stopPropagation();
+      event.srcEvent.stopImmediatePropagation();
+
+      // Hammer.js
+      var currentScale = this.state.scale;
+      var currentX = this.state.x;
+      var currentY = this.state.y;
+
+      var scaleEvent = event.scale;
+      var scaleDelta = 1 + (scaleEvent - this.lastScale);
+      this.lastScale = scaleEvent;
+      var scale = scaleDelta * currentScale;
+      scale = Math.max(scale, this.props.minZoom);
+
+      // Zoom and pan transform-origin equivalent
+      var oX = event.center.x;
+      var oY = event.center.y;
+      var deltaX = oX - this.lastX;
+      var deltaY = oY - this.lastY;
+      var x = scaleDelta * (currentX - oX) + oX + deltaX;
+      var y = scaleDelta * (currentY - oY) + oY + deltaY;
+
+      this.lastX = oX;
+      this.lastY = oY;
+
+      this.setState({
+        scale: scale,
+        x: x,
+        y: y,
+        tooltipVisible: false
+      });
+    },
+    onTransformEnd: function (event) {
+      // Don't drag nodes
+      event.srcEvent.stopPropagation();
+      event.srcEvent.stopImmediatePropagation();
+
+      // Hammer.js
+      this.pinching = false;
+    },
+    trackHandler: function (event) {
+      let detail = event.detail
+      let state = detail.state
+      switch (state) {
+        case 'start':
+          this.onTrackStart(event);
+          break;
+        case 'track':
+          this._onTrack(event);
+          break;
+        case 'end':
+          let hoverElem = detail.hover()
+          event.relatedTarget = hoverElem
+          this.onTrackEnd(event);
+          break;
+      }
+    },
+
+    onTrackStart: function (event) {
+      event.preventTap();
+      var domNode = ReactDOM.findDOMNode(this);
+    },
+    onTrack: function (event) {
+      if (this.pinching) {
+        return;
+      }
+      this.setState({
+        x: this.state.x + event.ddx,
+        y: this.state.y + event.ddy
+      });
+    },
+    onTrackEnd: function (event) {
+      // Don't click app (unselect)
+      event.stopPropagation();
+
+      var domNode = ReactDOM.findDOMNode(this);
+      domNode.removeEventListener("track", this.trackHandler);
+    },
+    onPanScale: function () {
+      // Pass pan/scale out to the-graph
+      if (this.props.onPanScale) {
+        this.props.onPanScale(this.state.x, this.state.y, this.state.scale);
+      }
+    },
+    showContext: function (options) {
+      this.setState({
+        contextMenu: options,
+        tooltipVisible: false
+      });
+    },
+    hideContext: function (event) {
+      this.setState({
+        contextMenu: null
+      });
+    },
+    changeTooltip: function (event) {
+      var tooltip = event.detail.tooltip;
+
+      // Don't go over right edge
+      var x = event.detail.x + 10;
+      var width = tooltip.length * 6;
+      if (x + width > this.props.width) {
+        x = event.detail.x - width - 10;
+      }
+
+      this.setState({
+        tooltip: tooltip,
+        tooltipVisible: true,
+        tooltipX: x,
+        tooltipY: event.detail.y + 20
+      });
+    },
+    hideTooltip: function (event) {
+      this.setState({
+        tooltip: "",
+        tooltipVisible: false
+      });
+    },
+    triggerFit: function (event) {
+      var fit = TheGraph.findFit(this.props.graph, this.props.width, this.props.height);
+      this.setState({
+        x: fit.x,
+        y: fit.y,
+        scale: fit.scale
+      });
+    },
+    focusNode: function (node) {
+      var duration = TheGraph.config.focusAnimationDuration;
+      var fit = TheGraph.findNodeFit(node, this.state.width, this.state.height);
+      var start_point = {
+          x: -(this.state.x - this.state.width / 2) / this.state.scale,
+          y: -(this.state.y - this.state.height / 2) / this.state.scale,
+        },
+        end_point = {
+          x: node.metadata.x,
+          y: node.metadata.y,
+        };
+      var graphfit = TheGraph.findAreaFit(start_point, end_point, this.state.width, this.state.height);
+      var scale_ratio_1 = Math.abs(graphfit.scale - this.state.scale);
+      var scale_ratio_2 = Math.abs(fit.scale - graphfit.scale);
+      var scale_ratio_diff = scale_ratio_1 + scale_ratio_2;
+
+      // Animation not available, jump right there
+      if (!this.animate) {
+        this.setState({
+          x: fit.x,
+          y: fit.y,
+          scale: fit.scale
+        });
+        return;
+      }
+
+      // Animate zoom-out then zoom-in
+      this.animate({
+        x: graphfit.x,
+        y: graphfit.y,
+        scale: graphfit.scale,
+      }, duration * (scale_ratio_1 / scale_ratio_diff), 'in-quint', function () {
+        this.animate({
+          x: fit.x,
+          y: fit.y,
+          scale: fit.scale,
+        }, duration * (scale_ratio_2 / scale_ratio_diff), 'out-quint');
+      }.bind(this));
+    },
+    edgeStart: function (event) {
+      // Listened from PortMenu.edgeStart() and Port.edgeStart()
+      // calls TheGraph .edgeStart
+      this.refs.graph.edgeStart(event);
+      this.hideContext();
+    },
+    componentDidMount: function () {
+      var domNode = ReactDOM.findDOMNode(this);
+
+      // Set up PolymerGestures for app and all children
+      var noop = function () {};
+
+      let PolymerGestures = window.Polymer.Gestures
+
+      // See: https://www.polymer-project.org/2.0/docs/devguide/gesture-events
+      //    Polymer.Gestures.addListener(this, 'tap', e => this.tapHandler(e));
+      // You can use the Polymer.Gestures.addListener function to add a listener to the host element.
+      PolymerGestures.addListener(domNode, "up", noop);
+      PolymerGestures.addListener(domNode, "down", noop);
+      PolymerGestures.addListener(domNode, "tap", noop);
+      PolymerGestures.addListener(domNode, "track", noop);
+      PolymerGestures.addListener(domNode, "hold", noop);
+
+      // Unselect edges and nodes
+      if (this.props.onNodeSelection) {
+        // https://developer.mozilla.org/en-US/docs/Web/API/EventTarget/addEventListener
+        domNode.addEventListener("tap", this.unselectAll);
+      }
+
+      // Don't let Hammer.js collide with polymer-gestures
+      var hammertime;
+      if (Hammer) {
+        hammertime = new Hammer(domNode, {});
+        hammertime.get('pinch').set({
+          enable: true
+        });
+      }
+
+      // Pointer gesture event for pan
+      domNode.addEventListener("track", this.onTrackStart);
+
+      var isTouchDevice = 'ontouchstart' in document.documentElement;
+      if (isTouchDevice && hammertime) {
+        hammertime.on("pinchstart", this.onTransformStart);
+        hammertime.on("pinch", this.onTransform);
+        hammertime.on("pinchend", this.onTransformEnd);
+      }
+
+      // Wheel to zoom
+      if (domNode.onwheel !== undefined) {
+        // Chrome and Firefox
+        domNode.addEventListener("wheel", this.onWheel);
+      } else if (domNode.onmousewheel !== undefined) {
+        // Safari
+        domNode.addEventListener("mousewheel", this.onWheel);
+      }
+
+      // Tooltip listener
+      domNode.addEventListener("the-graph-tooltip", this.changeTooltip);
+      domNode.addEventListener("the-graph-tooltip-hide", this.hideTooltip);
+
+      // Edge preview
+      domNode.addEventListener("the-graph-edge-start", this.edgeStart);
+
+      domNode.addEventListener("contextmenu", this.onShowContext);
+
+      // Start zoom from middle if zoom before mouse move
+      this.mouseX = Math.floor(this.props.width / 2);
+      this.mouseY = Math.floor(this.props.height / 2);
+
+      // HACK metaKey global for taps https://github.com/Polymer/PointerGestures/issues/29
+      document.addEventListener('keydown', this.keyDown);
+      document.addEventListener('keyup', this.keyUp);
+
+      // Canvas background
+      this.bgCanvas = unwrap(ReactDOM.findDOMNode(this.refs.canvas));
+      this.bgContext = unwrap(this.bgCanvas.getContext('2d'));
+      this.componentDidUpdate();
+
+
+      // Rerender graph once to fix edges
+      setTimeout(function () {
+        this.renderGraph();
+      }.bind(this), 500);
+    },
+    onShowContext: function (event) {
+      event.preventDefault();
+      event.stopPropagation();
+      if (event.preventTap) {
+        event.preventTap();
+      }
+
+      // Get mouse position
+      var x = event.x || event.clientX || 0;
+      var y = event.y || event.clientY || 0;
+
+      // App.showContext
+      this.showContext({
+        element: this,
+        type: "main",
+        x: x,
+        y: y,
+        graph: this.props.graph,
+        itemKey: 'graph',
+        item: this.props.graph
+      });
+    },
+    keyDown: function (event) {
+      // HACK metaKey global for taps https://github.com/Polymer/PointerGestures/issues/29
+      if (event.metaKey || event.ctrlKey) {
+        TheGraph.metaKeyPressed = true;
+      }
+
+      var key = event.keyCode,
+        hotKeys = {
+          // Delete
+          46: function () {
+            var graph = this.refs.graph.state.graph,
+              selectedNodes = this.refs.graph.state.selectedNodes,
+              selectedEdges = this.refs.graph.state.selectedEdges,
+              menus = this.props.menus,
+              menuOption = null,
+              menuAction = null,
+              nodeKey = null,
+              node = null,
+              edge = null;
+
+            for (nodeKey in selectedNodes) {
+              if (selectedNodes.hasOwnProperty(nodeKey)) {
+                node = graph.getNode(nodeKey);
+                menus.node.actions.delete(graph, nodeKey, node);
+              }
+            }
+            selectedEdges.map(function (edge) {
+              menus.edge.actions.delete(graph, null, edge);
+            });
+          }.bind(this),
+          // f for fit
+          70: function () {
+            this.triggerFit();
+          }.bind(this),
+          // s for selected
+          83: function () {
+            var graph = this.refs.graph.state.graph,
+              selectedNodes = this.refs.graph.state.selectedNodes,
+              nodeKey = null,
+              node = null;
+
+            for (nodeKey in selectedNodes) {
+              if (selectedNodes.hasOwnProperty(nodeKey)) {
+                node = graph.getNode(nodeKey);
+                this.focusNode(node);
+                break;
+              }
+            }
+          }.bind(this)
+        };
+
+      if (hotKeys[key]) {
+        hotKeys[key]();
+      }
+    },
+    keyUp: function (event) {
+      // Escape
+      if (event.keyCode === 27) {
+        if (!this.refs.graph) {
+          return;
+        }
+        this.refs.graph.cancelPreviewEdge();
+      }
+      // HACK metaKey global for taps https://github.com/Polymer/PointerGestures/issues/29
+      if (TheGraph.metaKeyPressed) {
+        TheGraph.metaKeyPressed = false;
+      }
+    },
+    unselectAll: function (event) {
+      // No arguments = clear selection
+      this.props.onNodeSelection();
+      this.props.onEdgeSelection();
+    },
+    renderGraph: function () {
+      this.refs.graph.markDirty();
+    },
+    componentDidUpdate: function (prevProps, prevState) {
+      this.renderCanvas(this.bgContext);
+      if (!prevState || prevState.x !== this.state.x || prevState.y !== this.state.y || prevState.scale !== this.state.scale) {
+        this.onPanScale();
+      }
+    },
+    renderCanvas: function (c) {
+      // Comment this line to go plaid
+      c.clearRect(0, 0, this.state.width, this.state.height);
+
+      // Background grid pattern
+      var scale = this.state.scale;
+      var g = TheGraph.config.nodeSize * scale;
+
+      var dx = this.state.x % g;
+      var dy = this.state.y % g;
+      var cols = Math.floor(this.state.width / g) + 1;
+      var row = Math.floor(this.state.height / g) + 1;
+      // Origin row/col index
+      var oc = Math.floor(this.state.x / g) + (this.state.x < 0 ? 1 : 0);
+      var or = Math.floor(this.state.y / g) + (this.state.y < 0 ? 1 : 0);
+
+      while (row--) {
+        var col = cols;
+        while (col--) {
+          var x = Math.round(col * g + dx);
+          var y = Math.round(row * g + dy);
+          if ((oc - col) % 3 === 0 && (or - row) % 3 === 0) {
+            // 3x grid
+            c.fillStyle = "white";
+            c.fillRect(x, y, 1, 1);
+          } else if (scale > 0.5) {
+            // 1x grid
+            c.fillStyle = "grey";
+            c.fillRect(x, y, 1, 1);
+          }
+        }
+      }
+
+    },
+
+    getContext: function (menu, options, hide) {
+      return TheGraph.Menu({
+        menu: menu,
+        options: options,
+        triggerHideContext: hide,
+        label: "Hello",
+        graph: this.props.graph,
+        node: this,
+        ports: [],
+        process: [],
+        processKey: null,
+        x: options.x,
+        y: options.y,
+        nodeWidth: this.props.width,
+        nodeHeight: this.props.height,
+        deltaX: 0,
+        deltaY: 0,
+        highlightPort: false
+      });
+    },
+    render: function () {
+      // pan and zoom
+      var sc = this.state.scale;
+      var x = this.state.x;
+      var y = this.state.y;
+      var transform = "matrix(" + sc + ",0,0," + sc + "," + x + "," + y + ")";
+
+      var scaleClass = sc > TheGraph.zbpBig ? "big" : (sc > TheGraph.zbpNormal ? "normal" : "small");
+      var props = this.props
+      var contextMenu, contextModal;
+      if (this.state.contextMenu) {
+        var options = this.state.contextMenu;
+        if (props.getMenuDef) {
+          var menu = props.getMenuDef(options);
+          if (menu) {
+            contextMenu = options.element.getContext(menu, options, this.hideContext);
+          }
+        }
+      }
+      if (contextMenu) {
+
+        var modalBGOptions = {
+          width: this.state.width,
+          height: this.state.height,
+          triggerHideContext: this.hideContext,
+          children: contextMenu
+        };
+
+        contextModal = [
+          TheGraph.factories.app.createAppModalBackground(modalBGOptions)
+        ];
+        this.menuShown = true;
+      } else {
+        this.menuShown = false;
+      }
+
+      var graphElementOptions = {
+        graph: this.props.graph,
+        scale: this.state.scale,
+        app: this,
+        library: this.props.library,
+        onNodeSelection: this.props.onNodeSelection,
+        onEdgeSelection: this.props.onEdgeSelection,
+        showContext: this.showContext
+      };
+      graphElementOptions = TheGraph.merge(TheGraph.config.app.graph, graphElementOptions);
+      var graphElement = TheGraph.factories.app.createAppGraph.call(this, graphElementOptions);
+
+      var svgGroupOptions = TheGraph.merge(TheGraph.config.app.svgGroup, {
+        transform: transform
+      });
+      var svgGroup = TheGraph.factories.app.createAppSvgGroup.call(this, svgGroupOptions, [graphElement]);
+
+      var tooltipOptions = {
+        x: this.state.tooltipX,
+        y: this.state.tooltipY,
+        visible: this.state.tooltipVisible,
+        label: this.state.tooltip
+      };
+
+      tooltipOptions = TheGraph.merge(TheGraph.config.app.tooltip, tooltipOptions);
+      var tooltip = TheGraph.factories.app.createAppTooltip.call(this, tooltipOptions);
+
+      var modalGroupOptions = TheGraph.merge(TheGraph.config.app.modal, {
+        children: contextModal
+      });
+      var modalGroup = TheGraph.factories.app.createAppModalGroup.call(this, modalGroupOptions);
+
+      var svgContents = [
+        svgGroup,
+        tooltip,
+        modalGroup
+      ];
+
+      var svgOptions = TheGraph.merge(TheGraph.config.app.svg, {
+        width: this.state.width,
+        height: this.state.height
+      });
+      var svg = TheGraph.factories.app.createAppSvg.call(this, svgOptions, svgContents);
+
+      var canvasOptions = TheGraph.merge(TheGraph.config.app.canvas, {
+        width: this.state.width,
+        height: this.state.height
+      });
+      var canvas = TheGraph.factories.app.createAppCanvas.call(this, canvasOptions);
+
+      var appContents = [
+        canvas,
+        svg
+      ];
+      var containerOptions = TheGraph.merge(TheGraph.config.app.container, {
+        style: {
+          width: this.state.width,
+          height: this.state.height
+        }
+      });
+      containerOptions.className += " " + scaleClass;
+      return TheGraph.factories.app.createAppContainer.call(this, containerOptions, appContents);
+    }
+  })
+}
+},{}],55:[function(require,module,exports){
 const reactMixin = require('react-mixin');
 const Component = require('react').Component
 
@@ -14358,7 +14970,7 @@ module.exports = TheGraph => {
   reactMixin.bindClass(GraphEdge, ToolTipMixin)
   return GraphEdge
 }
-},{"../mixins/tooltip":79,"react":48,"react-mixin":96}],55:[function(require,module,exports){
+},{"../mixins/tooltip":83,"react":48,"react-mixin":104}],56:[function(require,module,exports){
 const reactMixin = require('react-mixin');
 const Component = require('react').Component
 
@@ -14503,7 +15115,7 @@ module.exports = class GraphMenu extends Component {
 
   }
 }
-},{"react":48,"react-mixin":96}],56:[function(require,module,exports){
+},{"react":48,"react-mixin":104}],57:[function(require,module,exports){
 const reactMixin = require('react-mixin');
 const Component = require('react').Component
 
@@ -14590,7 +15202,7 @@ module.exports = class GraphNodeMenu extends Component {
 
   }
 }
-},{"react":48,"react-mixin":96}],57:[function(require,module,exports){
+},{"react":48,"react-mixin":104}],58:[function(require,module,exports){
 const reactMixin = require('react-mixin');
 const Component = require('react').Component
 
@@ -15097,7 +15709,7 @@ var ToolTipMixin = require('../mixins/tooltip')
 reactMixin.bindClass(GraphNode, ToolTipMixin)
 
 module.exports = GraphNode
-},{"../mixins/tooltip":79,"react":48,"react-mixin":96}],58:[function(require,module,exports){
+},{"../mixins/tooltip":83,"react":48,"react-mixin":104}],59:[function(require,module,exports){
 const reactMixin = require('react-mixin');
 const Component = require('react').Component
 
@@ -15308,7 +15920,7 @@ var ToolTipMixin = require('../mixins/tooltip')
 reactMixin.bindClass(GraphPort, ToolTipMixin)
 
 module.exports = GraphPort
-},{"../mixins/tooltip":79,"react":48,"react-mixin":96}],59:[function(require,module,exports){
+},{"../mixins/tooltip":83,"react":48,"react-mixin":104}],60:[function(require,module,exports){
 const reactMixin = require('react-mixin');
 const Component = require('react').Component
 
@@ -15340,7 +15952,7 @@ module.exports = class GraphTooltip extends Component {
 
   }
 }
-},{"react":48,"react-mixin":96}],60:[function(require,module,exports){
+},{"react":48,"react-mixin":104}],61:[function(require,module,exports){
 module.exports = React.createClass({
   displayName: "TheGraphGraph",
   mixins: [],
@@ -16184,7 +16796,7 @@ module.exports = React.createClass({
 
   }
 })
-},{}],61:[function(require,module,exports){
+},{}],62:[function(require,module,exports){
 module.exports = React.createClass({
   displayName: "TheGraphGroup",
   componentDidMount: function () {
@@ -16335,7 +16947,7 @@ module.exports = React.createClass({
 
   }
 })
-},{}],62:[function(require,module,exports){
+},{}],63:[function(require,module,exports){
 module.exports = React.createClass({
   displayName: "TheGraphModalBG",
   componentDidMount: function () {
@@ -16369,7 +16981,148 @@ module.exports = React.createClass({
     return TheGraph.factories.modalBG.createModalBackgroundGroup.call(this, containerOptions, containerContents);
   }
 })
-},{}],63:[function(require,module,exports){
+},{}],64:[function(require,module,exports){
+module.exports = React.createClass({
+  displayName: "TheGraphNodeMenuPort",
+  componentDidMount: function () {
+    ReactDOM.findDOMNode(this).addEventListener("up", this.edgeStart);
+  },
+  edgeStart: function (event) {
+    // Don't tap graph
+    event.stopPropagation();
+
+    var port = {
+      process: this.props.processKey,
+      port: this.props.label,
+      type: this.props.port.type
+    };
+
+    var edgeStartEvent = new CustomEvent('the-graph-edge-start', {
+      detail: {
+        isIn: this.props.isIn,
+        port: port,
+        route: this.props.route
+      },
+      bubbles: true
+    });
+    ReactDOM.findDOMNode(this).dispatchEvent(edgeStartEvent);
+  },
+  render: function () {
+    var labelLen = this.props.label.length;
+    var bgWidth = (labelLen > 12 ? labelLen * 8 + 40 : 120);
+    // Highlight compatible port
+    var highlightPort = this.props.highlightPort;
+    var highlight = (highlightPort && highlightPort.isIn === this.props.isIn && highlightPort.type === this.props.port.type);
+
+    var rectOptions = {
+      className: "context-port-bg" + (highlight ? " highlight" : ""),
+      x: this.props.x + (this.props.isIn ? -bgWidth : 0),
+      y: this.props.y - TheGraph.contextPortSize / 2,
+      width: bgWidth
+    };
+
+    rectOptions = TheGraph.merge(TheGraph.config.nodeMenuPort.backgroundRect, rectOptions);
+    var rect = TheGraph.factories.nodeMenuPort.createNodeMenuBackgroundRect.call(this, rectOptions);
+
+    var circleOptions = {
+      className: "context-port-hole stroke route" + this.props.route,
+      cx: this.props.x,
+      cy: this.props.y,
+    };
+    circleOptions = TheGraph.merge(TheGraph.config.nodeMenuPort.circle, circleOptions);
+    var circle = TheGraph.factories.nodeMenuPort.createNodeMenuPortCircle.call(this, circleOptions);
+
+    var textOptions = {
+      className: "context-port-label fill route" + this.props.route,
+      x: this.props.x + (this.props.isIn ? -20 : 20),
+      y: this.props.y,
+      children: this.props.label.replace(/(.*)\/(.*)(_.*)\.(.*)/, '$2.$4')
+    };
+
+    textOptions = TheGraph.merge(TheGraph.config.nodeMenuPort.text, textOptions);
+    var text = TheGraph.factories.nodeMenuPort.createNodeMenuPortText.call(this, textOptions);
+
+    var containerContents = [rect, circle, text];
+
+    var containerOptions = TheGraph.merge(TheGraph.config.nodeMenuPort.container, {
+      className: "context-port click context-port-" + (this.props.isIn ? "in" : "out")
+    });
+    return TheGraph.factories.nodeMenuPort.createNodeMenuPortGroup.call(this, containerOptions, containerContents);
+
+  }
+})
+},{}],65:[function(require,module,exports){
+module.exports = React.createClass({
+  displayName: "TheGraphNodeMenuPorts",
+  render: function () {
+    var portViews = [];
+    var lines = [];
+
+    var scale = this.props.scale;
+    var ports = this.props.ports;
+    var deltaX = this.props.deltaX;
+    var deltaY = this.props.deltaY;
+
+    var keys = Object.keys(this.props.ports);
+    var h = keys.length * TheGraph.contextPortSize;
+    var len = keys.length;
+    for (var i = 0; i < len; i++) {
+      var key = keys[i];
+      var port = ports[key];
+
+      var x = (this.props.isIn ? -100 : 100);
+      var y = 0 - h / 2 + i * TheGraph.contextPortSize + TheGraph.contextPortSize / 2;
+      var ox = (port.x - this.props.nodeWidth / 2) * scale + deltaX;
+      var oy = (port.y - this.props.nodeHeight / 2) * scale + deltaY;
+
+      // Make path from graph port to menu port
+      var lineOptions = TheGraph.merge(TheGraph.config.nodeMenuPorts.portPath, {
+        d: ["M", ox, oy, "L", x, y].join(" ")
+      });
+      var line = TheGraph.factories.menuPorts.createNodeMenuPortsPortPath.call(this, lineOptions);
+
+      var portViewOptions = {
+        label: key,
+        port: port,
+        processKey: this.props.processKey,
+        isIn: this.props.isIn,
+        x: x,
+        y: y,
+        route: port.route,
+        highlightPort: this.props.highlightPort
+      };
+      portViewOptions = TheGraph.merge(TheGraph.config.nodeMenuPorts.nodeMenuPort, portViewOptions);
+      var portView = TheGraph.factories.menuPorts.createNodeMenuPortsNodeMenuPort.call(this, portViewOptions);
+
+      lines.push(line);
+      portViews.push(portView);
+    }
+
+    var transform = "";
+    if (this.props.translateX !== undefined) {
+      transform = "translate(" + this.props.translateX + "," + this.props.translateY + ")";
+    }
+
+    var linesGroupOptions = TheGraph.merge(TheGraph.config.nodeMenuPorts.linesGroup, {
+      children: lines
+    });
+    var linesGroup = TheGraph.factories.menuPorts.createNodeMenuPortsLinesGroup.call(this, linesGroupOptions);
+
+    var portsGroupOptions = TheGraph.merge(TheGraph.config.nodeMenuPorts.portsGroup, {
+      children: portViews
+    });
+    var portsGroup = TheGraph.factories.menuPorts.createNodeMenuPortsGroup.call(this, portsGroupOptions);
+
+    var containerContents = [linesGroup, portsGroup];
+    var containerOptions = {
+      className: "context-ports context-ports-" + (this.props.isIn ? "in" : "out"),
+      transform: transform
+    };
+    containerOptions = TheGraph.merge(TheGraph.config.nodeMenuPorts.container, containerOptions);
+    return TheGraph.factories.menuPorts.createNodeMenuPortsGroup.call(this, containerOptions, containerContents);
+  }
+})
+},{}],66:[function(require,module,exports){
 module.exports = config => {
   return {
     curve: config.nodeSize,
@@ -16389,7 +17142,7 @@ module.exports = config => {
     }
   };
 }
-},{}],64:[function(require,module,exports){
+},{}],67:[function(require,module,exports){
 module.exports = {
   container: {},
   groupsGroup: {
@@ -16428,7 +17181,7 @@ module.exports = {
     label: ""
   }
 };
-},{}],65:[function(require,module,exports){
+},{}],68:[function(require,module,exports){
 module.exports = config => {
   return {
     radius: 72,
@@ -16486,7 +17239,7 @@ module.exports = config => {
     }
   };
 }
-},{}],66:[function(require,module,exports){
+},{}],69:[function(require,module,exports){
 module.exports = {
   container: {
     className: "context-node"
@@ -16498,7 +17251,7 @@ module.exports = {
     y: 0
   }
 };
-},{}],67:[function(require,module,exports){
+},{}],70:[function(require,module,exports){
 module.exports = (config) => {
   return {
     snap: config.nodeSize,
@@ -16551,7 +17304,7 @@ module.exports = (config) => {
     }
   }
 }
-},{}],68:[function(require,module,exports){
+},{}],71:[function(require,module,exports){
 module.exports = {
   container: {
     className: "port arrow"
@@ -16570,7 +17323,7 @@ module.exports = {
     className: "port-label drag"
   }
 };
-},{}],69:[function(require,module,exports){
+},{}],72:[function(require,module,exports){
 module.exports = {
   container: {},
   rect: {
@@ -16586,7 +17339,7 @@ module.exports = {
     ref: "label"
   }
 };
-},{}],70:[function(require,module,exports){
+},{}],73:[function(require,module,exports){
 function createEdgePathArray(sourceX, sourceY,
   c1X, c1Y, c2X, c2Y,
   targetX, targetY) {
@@ -16610,7 +17363,7 @@ module.exports = factories => {
     createArrow: factories.createPolygon
   };
 }
-},{}],71:[function(require,module,exports){
+},{}],74:[function(require,module,exports){
 module.exports = TheGraph => {
   function createGraphNode(options) {
     return TheGraph.Node(options);
@@ -16647,7 +17400,27 @@ module.exports = TheGraph => {
     createGraphEdgePreview: createGraphEdgePreview
   };
 }
-},{}],72:[function(require,module,exports){
+},{}],75:[function(require,module,exports){
+module.exports = config => {
+  return {
+    container: {
+      className: "group"
+    },
+    boxRect: {
+      ref: "box",
+      rx: config.nodeRadius,
+      ry: config.nodeRadius
+    },
+    labelText: {
+      ref: "label",
+      className: "group-label drag"
+    },
+    descriptionText: {
+      className: "group-description"
+    }
+  };
+}
+},{}],76:[function(require,module,exports){
 module.exports = TheGraph => {
   function createMenuSlice(options) {
     /*jshint validthis:true */
@@ -16714,7 +17487,7 @@ module.exports = TheGraph => {
     createMenuMiddleIconText: TheGraph.factories.createText
   };
 }
-},{}],73:[function(require,module,exports){
+},{}],77:[function(require,module,exports){
 module.exports = TheGraph => {
   function createNodeMenuPorts(options) {
     return TheGraph.NodeMenuPorts(options);
@@ -16731,7 +17504,7 @@ module.exports = TheGraph => {
     createNodeMenuMenu: createNodeMenuMenu
   };
 }
-},{}],74:[function(require,module,exports){
+},{}],78:[function(require,module,exports){
 module.exports = TheGraph => {
   function createNodePort(options) {
     // console.log('createNodePort', options)
@@ -16756,7 +17529,7 @@ module.exports = TheGraph => {
     createNodePort: createNodePort
   };
 }
-},{}],75:[function(require,module,exports){
+},{}],79:[function(require,module,exports){
 module.exports = factories => {
   return {
     createPortGroup: factories.createGroup,
@@ -16766,7 +17539,7 @@ module.exports = factories => {
     createPortLabelText: factories.createText
   };
 }
-},{}],76:[function(require,module,exports){
+},{}],80:[function(require,module,exports){
 module.exports = factories => {
   return {
     createTooltipGroup: factories.createGroup,
@@ -16774,7 +17547,7 @@ module.exports = factories => {
     createTooltipText: factories.createText
   };
 }
-},{}],77:[function(require,module,exports){
+},{}],81:[function(require,module,exports){
 /*
   this file is generated via `grunt build` 
 */
@@ -17571,7 +18344,7 @@ context.TheGraph.FONT_AWESOME = {
 };
 
 };
-},{}],78:[function(require,module,exports){
+},{}],82:[function(require,module,exports){
 module.exports = function (TheGraph) {
   TheGraph.config.modalBG = {
     container: {},
@@ -17589,7 +18362,7 @@ module.exports = function (TheGraph) {
   const ModalBg = require('../components/menu/modal-bg')
   TheGraph.ModalBG = React.createFactory(ModalBg);
 }
-},{"../components/menu/modal-bg":62}],79:[function(require,module,exports){
+},{"../components/menu/modal-bg":63}],83:[function(require,module,exports){
 module.exports = {
   showTooltip: function (event) {
     if (!this.shouldShowTooltip()) {
@@ -17630,7 +18403,7 @@ module.exports = {
     tooltipper.addEventListener("mouseleave", this.hideTooltip);
   }
 };
-},{}],80:[function(require,module,exports){
+},{}],84:[function(require,module,exports){
 module.exports.register = function (context) {
 
   var TheGraph = context.TheGraph;
@@ -17699,619 +18472,10 @@ module.exports.register = function (context) {
     return TheGraph.ModalBG(options);
   }
 
-  var mixins = [];
-  if (window.React.Animate) {
-    mixins.push(React.Animate);
-  }
-
-  TheGraph.App = React.createFactory(React.createClass({
-    displayName: "TheGraphApp",
-    mixins: mixins,
-    getInitialState: function () {
-      // Autofit
-      var fit = TheGraph.findFit(this.props.graph, this.props.width, this.props.height);
-
-      return {
-        x: fit.x,
-        y: fit.y,
-        scale: fit.scale,
-        width: this.props.width,
-        height: this.props.height,
-        minZoom: this.props.minZoom,
-        maxZoom: this.props.maxZoom,
-        tooltip: "",
-        tooltipX: 0,
-        tooltipY: 0,
-        tooltipVisible: false,
-        contextElement: null,
-        contextType: null,
-        offsetY: this.props.offsetY,
-        offsetX: this.props.offsetX
-      };
-    },
-    zoomFactor: 0,
-    zoomX: 0,
-    zoomY: 0,
-    onWheel: function (event) {
-      // Don't bounce
-      event.preventDefault();
-
-      if (!this.zoomFactor) { // WAT
-        this.zoomFactor = 0;
-      }
-
-      // Safari is wheelDeltaY
-      this.zoomFactor += event.deltaY ? event.deltaY : 0 - event.wheelDeltaY;
-      this.zoomX = event.clientX;
-      this.zoomY = event.clientY;
-      requestAnimationFrame(this.scheduleWheelZoom);
-    },
-    scheduleWheelZoom: function () {
-      if (isNaN(this.zoomFactor)) {
-        return;
-      }
-
-      // Speed limit
-      var zoomFactor = this.zoomFactor / -500;
-      zoomFactor = Math.min(0.5, Math.max(-0.5, zoomFactor));
-      var scale = this.state.scale + (this.state.scale * zoomFactor);
-      this.zoomFactor = 0;
-
-      if (scale < this.state.minZoom) {
-        scale = this.state.minZoom;
-      } else if (scale > this.state.maxZoom) {
-        scale = this.state.maxZoom;
-      }
-      if (scale === this.state.scale) {
-        return;
-      }
-
-      // Zoom and pan transform-origin equivalent
-      var scaleD = scale / this.state.scale;
-      var currentX = this.state.x;
-      var currentY = this.state.y;
-      var oX = this.zoomX;
-      var oY = this.zoomY;
-      var x = scaleD * (currentX - oX) + oX;
-      var y = scaleD * (currentY - oY) + oY;
-
-      this.setState({
-        scale: scale,
-        x: x,
-        y: y,
-        tooltipVisible: false
-      });
-    },
-    lastScale: 1,
-    lastX: 0,
-    lastY: 0,
-    pinching: false,
-    onTransformStart: function (event) {
-      // Don't drag nodes
-      event.srcEvent.stopPropagation();
-      event.srcEvent.stopImmediatePropagation();
-
-      // Hammer.js
-      this.lastScale = 1;
-      this.lastX = event.center.x;
-      this.lastY = event.center.y;
-      this.pinching = true;
-    },
-    onTransform: function (event) {
-      // Don't drag nodes
-      event.srcEvent.stopPropagation();
-      event.srcEvent.stopImmediatePropagation();
-
-      // Hammer.js
-      var currentScale = this.state.scale;
-      var currentX = this.state.x;
-      var currentY = this.state.y;
-
-      var scaleEvent = event.scale;
-      var scaleDelta = 1 + (scaleEvent - this.lastScale);
-      this.lastScale = scaleEvent;
-      var scale = scaleDelta * currentScale;
-      scale = Math.max(scale, this.props.minZoom);
-
-      // Zoom and pan transform-origin equivalent
-      var oX = event.center.x;
-      var oY = event.center.y;
-      var deltaX = oX - this.lastX;
-      var deltaY = oY - this.lastY;
-      var x = scaleDelta * (currentX - oX) + oX + deltaX;
-      var y = scaleDelta * (currentY - oY) + oY + deltaY;
-
-      this.lastX = oX;
-      this.lastY = oY;
-
-      this.setState({
-        scale: scale,
-        x: x,
-        y: y,
-        tooltipVisible: false
-      });
-    },
-    onTransformEnd: function (event) {
-      // Don't drag nodes
-      event.srcEvent.stopPropagation();
-      event.srcEvent.stopImmediatePropagation();
-
-      // Hammer.js
-      this.pinching = false;
-    },
-    trackHandler: function (event) {
-      let detail = event.detail
-      let state = detail.state
-      switch (state) {
-        case 'start':
-          this.onTrackStart(event);
-          break;
-        case 'track':
-          this._onTrack(event);
-          break;
-        case 'end':
-          let hoverElem = detail.hover()
-          event.relatedTarget = hoverElem
-          this.onTrackEnd(event);
-          break;
-      }
-    },
-
-    onTrackStart: function (event) {
-      event.preventTap();
-      var domNode = ReactDOM.findDOMNode(this);
-    },
-    onTrack: function (event) {
-      if (this.pinching) {
-        return;
-      }
-      this.setState({
-        x: this.state.x + event.ddx,
-        y: this.state.y + event.ddy
-      });
-    },
-    onTrackEnd: function (event) {
-      // Don't click app (unselect)
-      event.stopPropagation();
-
-      var domNode = ReactDOM.findDOMNode(this);
-      domNode.removeEventListener("track", this.trackHandler);
-    },
-    onPanScale: function () {
-      // Pass pan/scale out to the-graph
-      if (this.props.onPanScale) {
-        this.props.onPanScale(this.state.x, this.state.y, this.state.scale);
-      }
-    },
-    showContext: function (options) {
-      this.setState({
-        contextMenu: options,
-        tooltipVisible: false
-      });
-    },
-    hideContext: function (event) {
-      this.setState({
-        contextMenu: null
-      });
-    },
-    changeTooltip: function (event) {
-      var tooltip = event.detail.tooltip;
-
-      // Don't go over right edge
-      var x = event.detail.x + 10;
-      var width = tooltip.length * 6;
-      if (x + width > this.props.width) {
-        x = event.detail.x - width - 10;
-      }
-
-      this.setState({
-        tooltip: tooltip,
-        tooltipVisible: true,
-        tooltipX: x,
-        tooltipY: event.detail.y + 20
-      });
-    },
-    hideTooltip: function (event) {
-      this.setState({
-        tooltip: "",
-        tooltipVisible: false
-      });
-    },
-    triggerFit: function (event) {
-      var fit = TheGraph.findFit(this.props.graph, this.props.width, this.props.height);
-      this.setState({
-        x: fit.x,
-        y: fit.y,
-        scale: fit.scale
-      });
-    },
-    focusNode: function (node) {
-      var duration = TheGraph.config.focusAnimationDuration;
-      var fit = TheGraph.findNodeFit(node, this.state.width, this.state.height);
-      var start_point = {
-          x: -(this.state.x - this.state.width / 2) / this.state.scale,
-          y: -(this.state.y - this.state.height / 2) / this.state.scale,
-        },
-        end_point = {
-          x: node.metadata.x,
-          y: node.metadata.y,
-        };
-      var graphfit = TheGraph.findAreaFit(start_point, end_point, this.state.width, this.state.height);
-      var scale_ratio_1 = Math.abs(graphfit.scale - this.state.scale);
-      var scale_ratio_2 = Math.abs(fit.scale - graphfit.scale);
-      var scale_ratio_diff = scale_ratio_1 + scale_ratio_2;
-
-      // Animation not available, jump right there
-      if (!this.animate) {
-        this.setState({
-          x: fit.x,
-          y: fit.y,
-          scale: fit.scale
-        });
-        return;
-      }
-
-      // Animate zoom-out then zoom-in
-      this.animate({
-        x: graphfit.x,
-        y: graphfit.y,
-        scale: graphfit.scale,
-      }, duration * (scale_ratio_1 / scale_ratio_diff), 'in-quint', function () {
-        this.animate({
-          x: fit.x,
-          y: fit.y,
-          scale: fit.scale,
-        }, duration * (scale_ratio_2 / scale_ratio_diff), 'out-quint');
-      }.bind(this));
-    },
-    edgeStart: function (event) {
-      // Listened from PortMenu.edgeStart() and Port.edgeStart()
-      // calls TheGraph .edgeStart
-      this.refs.graph.edgeStart(event);
-      this.hideContext();
-    },
-    componentDidMount: function () {
-      var domNode = ReactDOM.findDOMNode(this);
-
-      // Set up PolymerGestures for app and all children
-      var noop = function () {};
-
-      let PolymerGestures = window.Polymer.Gestures
-
-      // See: https://www.polymer-project.org/2.0/docs/devguide/gesture-events
-      //    Polymer.Gestures.addListener(this, 'tap', e => this.tapHandler(e));
-      // You can use the Polymer.Gestures.addListener function to add a listener to the host element.
-      PolymerGestures.addListener(domNode, "up", noop);
-      PolymerGestures.addListener(domNode, "down", noop);
-      PolymerGestures.addListener(domNode, "tap", noop);
-      PolymerGestures.addListener(domNode, "track", noop);
-      PolymerGestures.addListener(domNode, "hold", noop);
-
-      // Unselect edges and nodes
-      if (this.props.onNodeSelection) {
-        // https://developer.mozilla.org/en-US/docs/Web/API/EventTarget/addEventListener
-        domNode.addEventListener("tap", this.unselectAll);
-      }
-
-      // Don't let Hammer.js collide with polymer-gestures
-      var hammertime;
-      if (Hammer) {
-        hammertime = new Hammer(domNode, {});
-        hammertime.get('pinch').set({
-          enable: true
-        });
-      }
-
-      // Pointer gesture event for pan
-      domNode.addEventListener("track", this.onTrackStart);
-
-      var isTouchDevice = 'ontouchstart' in document.documentElement;
-      if (isTouchDevice && hammertime) {
-        hammertime.on("pinchstart", this.onTransformStart);
-        hammertime.on("pinch", this.onTransform);
-        hammertime.on("pinchend", this.onTransformEnd);
-      }
-
-      // Wheel to zoom
-      if (domNode.onwheel !== undefined) {
-        // Chrome and Firefox
-        domNode.addEventListener("wheel", this.onWheel);
-      } else if (domNode.onmousewheel !== undefined) {
-        // Safari
-        domNode.addEventListener("mousewheel", this.onWheel);
-      }
-
-      // Tooltip listener
-      domNode.addEventListener("the-graph-tooltip", this.changeTooltip);
-      domNode.addEventListener("the-graph-tooltip-hide", this.hideTooltip);
-
-      // Edge preview
-      domNode.addEventListener("the-graph-edge-start", this.edgeStart);
-
-      domNode.addEventListener("contextmenu", this.onShowContext);
-
-      // Start zoom from middle if zoom before mouse move
-      this.mouseX = Math.floor(this.props.width / 2);
-      this.mouseY = Math.floor(this.props.height / 2);
-
-      // HACK metaKey global for taps https://github.com/Polymer/PointerGestures/issues/29
-      document.addEventListener('keydown', this.keyDown);
-      document.addEventListener('keyup', this.keyUp);
-
-      // Canvas background
-      this.bgCanvas = unwrap(ReactDOM.findDOMNode(this.refs.canvas));
-      this.bgContext = unwrap(this.bgCanvas.getContext('2d'));
-      this.componentDidUpdate();
-
-
-      // Rerender graph once to fix edges
-      setTimeout(function () {
-        this.renderGraph();
-      }.bind(this), 500);
-    },
-    onShowContext: function (event) {
-      event.preventDefault();
-      event.stopPropagation();
-      if (event.preventTap) {
-        event.preventTap();
-      }
-
-      // Get mouse position
-      var x = event.x || event.clientX || 0;
-      var y = event.y || event.clientY || 0;
-
-      // App.showContext
-      this.showContext({
-        element: this,
-        type: "main",
-        x: x,
-        y: y,
-        graph: this.props.graph,
-        itemKey: 'graph',
-        item: this.props.graph
-      });
-    },
-    keyDown: function (event) {
-      // HACK metaKey global for taps https://github.com/Polymer/PointerGestures/issues/29
-      if (event.metaKey || event.ctrlKey) {
-        TheGraph.metaKeyPressed = true;
-      }
-
-      var key = event.keyCode,
-        hotKeys = {
-          // Delete
-          46: function () {
-            var graph = this.refs.graph.state.graph,
-              selectedNodes = this.refs.graph.state.selectedNodes,
-              selectedEdges = this.refs.graph.state.selectedEdges,
-              menus = this.props.menus,
-              menuOption = null,
-              menuAction = null,
-              nodeKey = null,
-              node = null,
-              edge = null;
-
-            for (nodeKey in selectedNodes) {
-              if (selectedNodes.hasOwnProperty(nodeKey)) {
-                node = graph.getNode(nodeKey);
-                menus.node.actions.delete(graph, nodeKey, node);
-              }
-            }
-            selectedEdges.map(function (edge) {
-              menus.edge.actions.delete(graph, null, edge);
-            });
-          }.bind(this),
-          // f for fit
-          70: function () {
-            this.triggerFit();
-          }.bind(this),
-          // s for selected
-          83: function () {
-            var graph = this.refs.graph.state.graph,
-              selectedNodes = this.refs.graph.state.selectedNodes,
-              nodeKey = null,
-              node = null;
-
-            for (nodeKey in selectedNodes) {
-              if (selectedNodes.hasOwnProperty(nodeKey)) {
-                node = graph.getNode(nodeKey);
-                this.focusNode(node);
-                break;
-              }
-            }
-          }.bind(this)
-        };
-
-      if (hotKeys[key]) {
-        hotKeys[key]();
-      }
-    },
-    keyUp: function (event) {
-      // Escape
-      if (event.keyCode === 27) {
-        if (!this.refs.graph) {
-          return;
-        }
-        this.refs.graph.cancelPreviewEdge();
-      }
-      // HACK metaKey global for taps https://github.com/Polymer/PointerGestures/issues/29
-      if (TheGraph.metaKeyPressed) {
-        TheGraph.metaKeyPressed = false;
-      }
-    },
-    unselectAll: function (event) {
-      // No arguments = clear selection
-      this.props.onNodeSelection();
-      this.props.onEdgeSelection();
-    },
-    renderGraph: function () {
-      this.refs.graph.markDirty();
-    },
-    componentDidUpdate: function (prevProps, prevState) {
-      this.renderCanvas(this.bgContext);
-      if (!prevState || prevState.x !== this.state.x || prevState.y !== this.state.y || prevState.scale !== this.state.scale) {
-        this.onPanScale();
-      }
-    },
-    renderCanvas: function (c) {
-      // Comment this line to go plaid
-      c.clearRect(0, 0, this.state.width, this.state.height);
-
-      // Background grid pattern
-      var scale = this.state.scale;
-      var g = TheGraph.config.nodeSize * scale;
-
-      var dx = this.state.x % g;
-      var dy = this.state.y % g;
-      var cols = Math.floor(this.state.width / g) + 1;
-      var row = Math.floor(this.state.height / g) + 1;
-      // Origin row/col index
-      var oc = Math.floor(this.state.x / g) + (this.state.x < 0 ? 1 : 0);
-      var or = Math.floor(this.state.y / g) + (this.state.y < 0 ? 1 : 0);
-
-      while (row--) {
-        var col = cols;
-        while (col--) {
-          var x = Math.round(col * g + dx);
-          var y = Math.round(row * g + dy);
-          if ((oc - col) % 3 === 0 && (or - row) % 3 === 0) {
-            // 3x grid
-            c.fillStyle = "white";
-            c.fillRect(x, y, 1, 1);
-          } else if (scale > 0.5) {
-            // 1x grid
-            c.fillStyle = "grey";
-            c.fillRect(x, y, 1, 1);
-          }
-        }
-      }
-
-    },
-
-    getContext: function (menu, options, hide) {
-      return TheGraph.Menu({
-        menu: menu,
-        options: options,
-        triggerHideContext: hide,
-        label: "Hello",
-        graph: this.props.graph,
-        node: this,
-        ports: [],
-        process: [],
-        processKey: null,
-        x: options.x,
-        y: options.y,
-        nodeWidth: this.props.width,
-        nodeHeight: this.props.height,
-        deltaX: 0,
-        deltaY: 0,
-        highlightPort: false
-      });
-    },
-    render: function () {
-      // pan and zoom
-      var sc = this.state.scale;
-      var x = this.state.x;
-      var y = this.state.y;
-      var transform = "matrix(" + sc + ",0,0," + sc + "," + x + "," + y + ")";
-
-      var scaleClass = sc > TheGraph.zbpBig ? "big" : (sc > TheGraph.zbpNormal ? "normal" : "small");
-      var props = this.props
-      var contextMenu, contextModal;
-      if (this.state.contextMenu) {
-        var options = this.state.contextMenu;
-        if (props.getMenuDef) {
-          var menu = props.getMenuDef(options);
-          if (menu) {
-            contextMenu = options.element.getContext(menu, options, this.hideContext);
-          }
-        }
-      }
-      if (contextMenu) {
-
-        var modalBGOptions = {
-          width: this.state.width,
-          height: this.state.height,
-          triggerHideContext: this.hideContext,
-          children: contextMenu
-        };
-
-        contextModal = [
-          TheGraph.factories.app.createAppModalBackground(modalBGOptions)
-        ];
-        this.menuShown = true;
-      } else {
-        this.menuShown = false;
-      }
-
-      var graphElementOptions = {
-        graph: this.props.graph,
-        scale: this.state.scale,
-        app: this,
-        library: this.props.library,
-        onNodeSelection: this.props.onNodeSelection,
-        onEdgeSelection: this.props.onEdgeSelection,
-        showContext: this.showContext
-      };
-      graphElementOptions = TheGraph.merge(TheGraph.config.app.graph, graphElementOptions);
-      var graphElement = TheGraph.factories.app.createAppGraph.call(this, graphElementOptions);
-
-      var svgGroupOptions = TheGraph.merge(TheGraph.config.app.svgGroup, {
-        transform: transform
-      });
-      var svgGroup = TheGraph.factories.app.createAppSvgGroup.call(this, svgGroupOptions, [graphElement]);
-
-      var tooltipOptions = {
-        x: this.state.tooltipX,
-        y: this.state.tooltipY,
-        visible: this.state.tooltipVisible,
-        label: this.state.tooltip
-      };
-
-      tooltipOptions = TheGraph.merge(TheGraph.config.app.tooltip, tooltipOptions);
-      var tooltip = TheGraph.factories.app.createAppTooltip.call(this, tooltipOptions);
-
-      var modalGroupOptions = TheGraph.merge(TheGraph.config.app.modal, {
-        children: contextModal
-      });
-      var modalGroup = TheGraph.factories.app.createAppModalGroup.call(this, modalGroupOptions);
-
-      var svgContents = [
-        svgGroup,
-        tooltip,
-        modalGroup
-      ];
-
-      var svgOptions = TheGraph.merge(TheGraph.config.app.svg, {
-        width: this.state.width,
-        height: this.state.height
-      });
-      var svg = TheGraph.factories.app.createAppSvg.call(this, svgOptions, svgContents);
-
-      var canvasOptions = TheGraph.merge(TheGraph.config.app.canvas, {
-        width: this.state.width,
-        height: this.state.height
-      });
-      var canvas = TheGraph.factories.app.createAppCanvas.call(this, canvasOptions);
-
-      var appContents = [
-        canvas,
-        svg
-      ];
-      var containerOptions = TheGraph.merge(TheGraph.config.app.container, {
-        style: {
-          width: this.state.width,
-          height: this.state.height
-        }
-      });
-      containerOptions.className += " " + scaleClass;
-      return TheGraph.factories.app.createAppContainer.call(this, containerOptions, appContents);
-    }
-  }));
-
-
+  const GraphApp = require('./components/graph-app')(TheGraph)
+  TheGraph.App = React.createFactory(GraphApp);
 };
-},{}],81:[function(require,module,exports){
+},{"./components/graph-app":54}],85:[function(require,module,exports){
 
 // NOTE: caller should wrap in a graph transaction, to group all changes made to @graph
 function applyAutolayout(graph, keilerGraph, props) {
@@ -18369,7 +18533,7 @@ module.exports = {
   applyToGraph: applyAutolayout,
 };
 
-},{}],82:[function(require,module,exports){
+},{}],86:[function(require,module,exports){
 /**
  * Created by mpricope on 05.09.14.
  */
@@ -18452,7 +18616,7 @@ module.exports.register = function (context) {
 
 };
 
-},{}],83:[function(require,module,exports){
+},{}],87:[function(require,module,exports){
 module.exports.register = function (context) {
 
   var TheGraph = context.TheGraph;
@@ -18465,7 +18629,7 @@ module.exports.register = function (context) {
   const GraphEdge = require('./components/graph-edge')(TheGraph)
   TheGraph.Edge = React.createFactory(GraphEdge);
 };
-},{"./components/graph-edge":54,"./config/edge":63,"./factories/edge":70}],84:[function(require,module,exports){
+},{"./components/graph-edge":55,"./config/edge":66,"./factories/edge":73}],88:[function(require,module,exports){
 module.exports.register = function (context) {
 
   var TheGraph = context.TheGraph;
@@ -18477,29 +18641,12 @@ module.exports.register = function (context) {
   const Graph = require('./components/graph')
   TheGraph.Graph = React.createFactory(Graph);
 };
-},{"./components/graph":60,"./config/graph":64,"./factories/graph":71}],85:[function(require,module,exports){
+},{"./components/graph":61,"./config/graph":67,"./factories/graph":74}],89:[function(require,module,exports){
 module.exports.register = function (context) {
 
   var TheGraph = context.TheGraph;
 
-  TheGraph.config.group = {
-    container: {
-      className: "group"
-    },
-    boxRect: {
-      ref: "box",
-      rx: TheGraph.config.nodeRadius,
-      ry: TheGraph.config.nodeRadius
-    },
-    labelText: {
-      ref: "label",
-      className: "group-label drag"
-    },
-    descriptionText: {
-      className: "group-description"
-    }
-  };
-
+  TheGraph.config.group = require('./factories/group')(TheGraph.config)
   TheGraph.factories.group = {
     createGroupGroup: TheGraph.factories.createGroup,
     createGroupBoxRect: TheGraph.factories.createRect,
@@ -18511,7 +18658,7 @@ module.exports.register = function (context) {
   const Group = require('./components/group')
   TheGraph.Group = React.createFactory(Group);
 };
-},{"./components/group":61}],86:[function(require,module,exports){
+},{"./components/group":62,"./factories/group":75}],90:[function(require,module,exports){
 module.exports.register = function (context) {
 
   var TheGraph = context.TheGraph;
@@ -18588,7 +18735,7 @@ module.exports.register = function (context) {
 
 };
 
-},{}],87:[function(require,module,exports){
+},{}],91:[function(require,module,exports){
 // Component library functionality
 function mergeComponentDefinition(component, definition) {
   // In cases where a component / subgraph ports change,
@@ -18738,7 +18885,7 @@ module.exports = {
   componentsFromGraph: componentsFromGraph,
 };
 
-},{}],88:[function(require,module,exports){
+},{}],92:[function(require,module,exports){
 module.exports.register = function (context) {
 
   var TheGraph = context.TheGraph;
@@ -18751,7 +18898,7 @@ module.exports.register = function (context) {
 
   require('./menu/modal-bg')(TheGraph)
 };
-},{"./components/graph-menu":55,"./config/menu":65,"./factories/menu":72,"./menu/modal-bg":78}],89:[function(require,module,exports){
+},{"./components/graph-menu":56,"./config/menu":68,"./factories/menu":76,"./menu/modal-bg":82}],93:[function(require,module,exports){
 module.exports.register = function (context) {
 
   var TheGraph = context.TheGraph;
@@ -18776,79 +18923,10 @@ module.exports.register = function (context) {
     createNodeMenuPortText: TheGraph.factories.createText
   };
 
-
-  TheGraph.NodeMenuPort = React.createFactory( React.createClass({
-    displayName: "TheGraphNodeMenuPort",
-    componentDidMount: function () {
-      ReactDOM.findDOMNode(this).addEventListener("up", this.edgeStart);
-    },
-    edgeStart: function (event) {
-      // Don't tap graph
-      event.stopPropagation();
-
-      var port = {
-        process: this.props.processKey,
-        port: this.props.label,
-        type: this.props.port.type
-      };
-
-      var edgeStartEvent = new CustomEvent('the-graph-edge-start', { 
-        detail: {
-          isIn: this.props.isIn,
-          port: port,
-          route: this.props.route
-        },
-        bubbles: true
-      });
-      ReactDOM.findDOMNode(this).dispatchEvent(edgeStartEvent);
-    },
-    render: function() {
-      var labelLen = this.props.label.length;
-      var bgWidth = (labelLen>12 ? labelLen*8+40 : 120);
-      // Highlight compatible port
-      var highlightPort = this.props.highlightPort;
-      var highlight = (highlightPort && highlightPort.isIn === this.props.isIn && highlightPort.type === this.props.port.type);
-
-      var rectOptions = {
-        className: "context-port-bg"+(highlight ? " highlight" : ""),
-        x: this.props.x + (this.props.isIn ? -bgWidth : 0),
-        y: this.props.y - TheGraph.contextPortSize/2,
-        width: bgWidth
-      };
-
-      rectOptions = TheGraph.merge(TheGraph.config.nodeMenuPort.backgroundRect, rectOptions);
-      var rect = TheGraph.factories.nodeMenuPort.createNodeMenuBackgroundRect.call(this, rectOptions);
-
-      var circleOptions = {
-        className: "context-port-hole stroke route"+this.props.route,
-        cx: this.props.x,
-        cy: this.props.y,
-      };
-      circleOptions = TheGraph.merge(TheGraph.config.nodeMenuPort.circle, circleOptions);
-      var circle = TheGraph.factories.nodeMenuPort.createNodeMenuPortCircle.call(this, circleOptions);
-
-      var textOptions = {
-        className: "context-port-label fill route"+this.props.route,
-        x: this.props.x + (this.props.isIn ? -20 : 20),
-        y: this.props.y,
-        children: this.props.label.replace(/(.*)\/(.*)(_.*)\.(.*)/, '$2.$4')
-      };
-
-      textOptions = TheGraph.merge(TheGraph.config.nodeMenuPort.text, textOptions);
-      var text = TheGraph.factories.nodeMenuPort.createNodeMenuPortText.call(this, textOptions);
-
-      var containerContents = [rect, circle, text];
-
-      var containerOptions = TheGraph.merge(TheGraph.config.nodeMenuPort.container, { className: "context-port click context-port-"+(this.props.isIn ? "in" : "out") });
-      return TheGraph.factories.nodeMenuPort.createNodeMenuPortGroup.call(this, containerOptions, containerContents);
-
-    }
-  }));
-
-
+  const NodeMenuPort = require('./components/node-menu-port')
+  TheGraph.NodeMenuPort = React.createFactory(NodeMenuPort);
 };
-
-},{}],90:[function(require,module,exports){
+},{"./components/node-menu-port":64}],94:[function(require,module,exports){
 module.exports.register = function (context) {
 
   var TheGraph = context.TheGraph;
@@ -18879,75 +18957,10 @@ module.exports.register = function (context) {
     return TheGraph.NodeMenuPort(options);
   }
 
-  TheGraph.NodeMenuPorts = React.createFactory( React.createClass({
-    displayName: "TheGraphNodeMenuPorts",
-    render: function() {
-      var portViews = [];
-      var lines = [];
-
-      var scale = this.props.scale;
-      var ports = this.props.ports;
-      var deltaX = this.props.deltaX;
-      var deltaY = this.props.deltaY;
-
-      var keys = Object.keys(this.props.ports);
-      var h = keys.length * TheGraph.contextPortSize;
-      var len = keys.length;
-      for (var i=0; i<len; i++) {
-        var key = keys[i];
-        var port = ports[key];
-
-        var x = (this.props.isIn ? -100 : 100);
-        var y = 0 - h/2 + i*TheGraph.contextPortSize + TheGraph.contextPortSize/2;
-        var ox = (port.x - this.props.nodeWidth/2) * scale + deltaX;
-        var oy = (port.y - this.props.nodeHeight/2) * scale + deltaY;
-
-        // Make path from graph port to menu port
-        var lineOptions = TheGraph.merge(TheGraph.config.nodeMenuPorts.portPath, { d: [ "M", ox, oy, "L", x, y ].join(" ") });
-        var line = TheGraph.factories.menuPorts.createNodeMenuPortsPortPath.call(this, lineOptions);
-
-        var portViewOptions = {
-          label: key,
-          port: port,
-          processKey: this.props.processKey,
-          isIn: this.props.isIn,
-          x: x,
-          y: y,
-          route: port.route,
-          highlightPort: this.props.highlightPort
-        };
-        portViewOptions = TheGraph.merge(TheGraph.config.nodeMenuPorts.nodeMenuPort, portViewOptions);
-        var portView = TheGraph.factories.menuPorts.createNodeMenuPortsNodeMenuPort.call(this, portViewOptions);
-
-        lines.push(line);
-        portViews.push(portView);
-      }
-
-      var transform = "";
-      if (this.props.translateX !== undefined) {
-        transform = "translate("+this.props.translateX+","+this.props.translateY+")";
-      }
-
-      var linesGroupOptions = TheGraph.merge(TheGraph.config.nodeMenuPorts.linesGroup, { children: lines });
-      var linesGroup = TheGraph.factories.menuPorts.createNodeMenuPortsLinesGroup.call(this, linesGroupOptions);
-
-      var portsGroupOptions = TheGraph.merge(TheGraph.config.nodeMenuPorts.portsGroup, { children: portViews });
-      var portsGroup = TheGraph.factories.menuPorts.createNodeMenuPortsGroup.call(this, portsGroupOptions);
-
-      var containerContents = [linesGroup, portsGroup];
-      var containerOptions = {
-        className: "context-ports context-ports-"+(this.props.isIn ? "in" : "out"),
-        transform: transform
-      };
-      containerOptions = TheGraph.merge(TheGraph.config.nodeMenuPorts.container, containerOptions);
-      return TheGraph.factories.menuPorts.createNodeMenuPortsGroup.call(this, containerOptions, containerContents);
-    }
-  }));
-
-
+  const NodeMenuPorts = require('./components/node-menu-ports')
+  TheGraph.NodeMenuPorts = React.createFactory(NodeMenuPorts);
 };
-
-},{}],91:[function(require,module,exports){
+},{"./components/node-menu-ports":65}],95:[function(require,module,exports){
 module.exports.register = function (context) {
 
   var TheGraph = context.TheGraph;
@@ -18958,7 +18971,7 @@ module.exports.register = function (context) {
   const GraphNodeMenu = require('./components/graph-node-menu')
   TheGraph.NodeMenu = React.createFactory(GraphNodeMenu);
 };
-},{"./components/graph-node-menu":56,"./config/node-menu":66,"./factories/node-menu":73}],92:[function(require,module,exports){
+},{"./components/graph-node-menu":57,"./config/node-menu":69,"./factories/node-menu":77}],96:[function(require,module,exports){
 module.exports.register = function (context) {
 
   var TheGraph = context.TheGraph;
@@ -18980,7 +18993,7 @@ module.exports.register = function (context) {
   // Node view
   TheGraph.Node = React.createFactory(GraphNode);
 };
-},{"./components/graph-node":57,"./config/node":67,"./factories/node":74}],93:[function(require,module,exports){
+},{"./components/graph-node":58,"./config/node":70,"./factories/node":78}],97:[function(require,module,exports){
 module.exports.register = function (context) {
 
   var TheGraph = context.TheGraph;
@@ -18995,7 +19008,7 @@ module.exports.register = function (context) {
 
 
 };
-},{"./components/graph-port":58,"./config/port":68,"./factories/port":75}],94:[function(require,module,exports){
+},{"./components/graph-port":59,"./config/port":71,"./factories/port":79}],98:[function(require,module,exports){
 module.exports.register = function (context) {
   var TheGraph = context.TheGraph;
   TheGraph.config.tooltip = require('./config/tooltip')
@@ -19005,7 +19018,7 @@ module.exports.register = function (context) {
   const GraphTooltip = require('./components/graph-tooltip')
   TheGraph.Tooltip = React.createFactory(GraphTooltip);
 };
-},{"./components/graph-tooltip":59,"./config/tooltip":69,"./factories/tooltip":76}],95:[function(require,module,exports){
+},{"./components/graph-tooltip":60,"./config/tooltip":72,"./factories/tooltip":80}],99:[function(require,module,exports){
 module.exports.register = function (context) {
 
   var defaultNodeSize = 72;
@@ -19054,6 +19067,136 @@ module.exports.register = function (context) {
   // shouldShowTooltip (boolean)
   TheGraph.mixins.Tooltip = ToolTipMixin
 
+  require('./the-graph/utils')(TheGraph)
+  require('./the-graph/factories')(TheGraph)
+
+  // Reusable React classes
+  const SvgImage = require('./the-graph/svg-image')
+  TheGraph.SVGImage = React.createFactory(SvgImage);
+
+  const TextBg = require('./the-graph/text-bg')
+  TheGraph.TextBG = React.createFactory(TextBg);
+};
+},{"./mixins/tooltip":83,"./the-graph/factories":100,"./the-graph/svg-image":101,"./the-graph/text-bg":102,"./the-graph/utils":103}],100:[function(require,module,exports){
+module.exports = TheGraph => {
+  TheGraph.factories.createGroup = function (options, content) {
+    var args = [options];
+
+    if (Array.isArray(content)) {
+      args = args.concat(content);
+    }
+
+    return React.DOM.g.apply(React.DOM.g, args);
+  };
+
+  TheGraph.factories.createRect = function (options) {
+    return React.DOM.rect(options);
+  };
+
+  TheGraph.factories.createText = function (options) {
+    return React.DOM.text(options);
+  };
+
+  TheGraph.factories.createCircle = function (options) {
+    return React.DOM.circle(options);
+  };
+
+  TheGraph.factories.createPath = function (options) {
+    return React.DOM.path(options);
+  };
+
+  TheGraph.factories.createPolygon = function (options) {
+    return React.DOM.polygon(options);
+  };
+
+  TheGraph.factories.createImg = function (options) {
+    return TheGraph.SVGImage(options);
+  };
+
+  TheGraph.factories.createCanvas = function (options) {
+    return React.DOM.canvas(options);
+  };
+
+  TheGraph.factories.createSvg = function (options, content) {
+
+    var args = [options];
+
+    if (Array.isArray(content)) {
+      args = args.concat(content);
+    }
+
+    return React.DOM.svg.apply(React.DOM.svg, args);
+  };
+}
+},{}],101:[function(require,module,exports){
+module.exports = React.createClass({
+  displayName: "TheGraphSVGImage",
+  render: function () {
+    var html = '<image ';
+    html = html + 'xlink:href="' + this.props.src + '"';
+    html = html + 'x="' + this.props.x + '"';
+    html = html + 'y="' + this.props.y + '"';
+    html = html + 'width="' + this.props.width + '"';
+    html = html + 'height="' + this.props.height + '"';
+    html = html + '/>';
+
+    return React.DOM.g({
+      className: this.props.className,
+      dangerouslySetInnerHTML: {
+        __html: html
+      }
+    });
+  }
+})
+},{}],102:[function(require,module,exports){
+module.exports = React.createClass({
+  displayName: "TheGraphTextBG",
+  render: function () {
+    var text = this.props.text;
+    if (!text) {
+      text = "";
+    }
+    var height = this.props.height;
+    var width = text.length * this.props.height * 2 / 3;
+    var radius = this.props.height / 2;
+
+    var textAnchor = "start";
+    var dominantBaseline = "central";
+    var x = this.props.x;
+    var y = this.props.y - height / 2;
+
+    if (this.props.halign === "center") {
+      x -= width / 2;
+      textAnchor = "middle";
+    }
+    if (this.props.halign === "right") {
+      x -= width;
+      textAnchor = "end";
+    }
+
+    return React.DOM.g({
+        className: (this.props.className ? this.props.className : "text-bg"),
+      },
+      React.DOM.rect({
+        className: "text-bg-rect",
+        x: x,
+        y: y,
+        rx: radius,
+        ry: radius,
+        height: height * 1.1,
+        width: width
+      }),
+      React.DOM.text({
+        className: (this.props.textClassName ? this.props.textClassName : "text-bg-text"),
+        x: this.props.x,
+        y: this.props.y,
+        children: text
+      })
+    );
+  }
+})
+},{}],103:[function(require,module,exports){
+module.exports = TheGraph => {
   TheGraph.findMinMax = function (graph, nodes) {
     // console.log('findMinMax', graph)
     var inports, outports;
@@ -19286,74 +19429,6 @@ module.exports.register = function (context) {
   };
 
 
-  // Reusable React classes
-  TheGraph.SVGImage = React.createFactory(React.createClass({
-    displayName: "TheGraphSVGImage",
-    render: function () {
-      var html = '<image ';
-      html = html + 'xlink:href="' + this.props.src + '"';
-      html = html + 'x="' + this.props.x + '"';
-      html = html + 'y="' + this.props.y + '"';
-      html = html + 'width="' + this.props.width + '"';
-      html = html + 'height="' + this.props.height + '"';
-      html = html + '/>';
-
-      return React.DOM.g({
-        className: this.props.className,
-        dangerouslySetInnerHTML: {
-          __html: html
-        }
-      });
-    }
-  }));
-
-  TheGraph.TextBG = React.createFactory(React.createClass({
-    displayName: "TheGraphTextBG",
-    render: function () {
-      var text = this.props.text;
-      if (!text) {
-        text = "";
-      }
-      var height = this.props.height;
-      var width = text.length * this.props.height * 2 / 3;
-      var radius = this.props.height / 2;
-
-      var textAnchor = "start";
-      var dominantBaseline = "central";
-      var x = this.props.x;
-      var y = this.props.y - height / 2;
-
-      if (this.props.halign === "center") {
-        x -= width / 2;
-        textAnchor = "middle";
-      }
-      if (this.props.halign === "right") {
-        x -= width;
-        textAnchor = "end";
-      }
-
-      return React.DOM.g({
-          className: (this.props.className ? this.props.className : "text-bg"),
-        },
-        React.DOM.rect({
-          className: "text-bg-rect",
-          x: x,
-          y: y,
-          rx: radius,
-          ry: radius,
-          height: height * 1.1,
-          width: width
-        }),
-        React.DOM.text({
-          className: (this.props.textClassName ? this.props.textClassName : "text-bg-text"),
-          x: this.props.x,
-          y: this.props.y,
-          children: text
-        })
-      );
-    }
-  }));
-
   // The `merge` function provides simple property merging.
   TheGraph.merge = function (src, dest, overwrite) {
     // Do nothing if neither are true objects.
@@ -19370,55 +19445,6 @@ module.exports.register = function (context) {
     }
 
     return dest;
-  };
-
-  TheGraph.factories.createGroup = function (options, content) {
-    var args = [options];
-
-    if (Array.isArray(content)) {
-      args = args.concat(content);
-    }
-
-    return React.DOM.g.apply(React.DOM.g, args);
-  };
-
-  TheGraph.factories.createRect = function (options) {
-    return React.DOM.rect(options);
-  };
-
-  TheGraph.factories.createText = function (options) {
-    return React.DOM.text(options);
-  };
-
-  TheGraph.factories.createCircle = function (options) {
-    return React.DOM.circle(options);
-  };
-
-  TheGraph.factories.createPath = function (options) {
-    return React.DOM.path(options);
-  };
-
-  TheGraph.factories.createPolygon = function (options) {
-    return React.DOM.polygon(options);
-  };
-
-  TheGraph.factories.createImg = function (options) {
-    return TheGraph.SVGImage(options);
-  };
-
-  TheGraph.factories.createCanvas = function (options) {
-    return React.DOM.canvas(options);
-  };
-
-  TheGraph.factories.createSvg = function (options, content) {
-
-    var args = [options];
-
-    if (Array.isArray(content)) {
-      args = args.concat(content);
-    }
-
-    return React.DOM.svg.apply(React.DOM.svg, args);
   };
 
   TheGraph.getOffset = function (domNode) {
@@ -19445,8 +19471,8 @@ module.exports.register = function (context) {
     }
   };
 
-};
-},{"./mixins/tooltip":79}],96:[function(require,module,exports){
+}
+},{}],104:[function(require,module,exports){
 var mixin = require('smart-mixin');
 var assign = require('object-assign');
 
@@ -19629,9 +19655,9 @@ module.exports = (function () {
 
   return reactMixin;
 })();
-},{"object-assign":97,"smart-mixin":98}],97:[function(require,module,exports){
+},{"object-assign":105,"smart-mixin":106}],105:[function(require,module,exports){
 arguments[4][18][0].apply(exports,arguments)
-},{"dup":18}],98:[function(require,module,exports){
+},{"dup":18}],106:[function(require,module,exports){
 function objToStr(x){ return Object.prototype.toString.call(x); };
 
 function returner(x) { return x; }
