@@ -9,6 +9,4 @@ module.exports.register = function (context) {
   // Port view
   const GraphPort = require('./components/graph-port')
   TheGraph.Port = React.createFactory(GraphPort);
-
-
 };
