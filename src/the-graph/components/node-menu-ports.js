@@ -1,6 +1,11 @@
-module.exports = React.createClass({
-  displayName: "TheGraphNodeMenuPorts",
-  render: function () {
+const Component = require('react').Component
+
+module.exports = class TheGraphNodeMenuPorts extends Component {
+  get displayName() {
+    return 'TheGraphNodeMenuPorts'
+  }
+
+  render() {
     var portViews = [];
     var lines = [];
 
@@ -67,4 +72,4 @@ module.exports = React.createClass({
     containerOptions = TheGraph.merge(TheGraph.config.nodeMenuPorts.container, containerOptions);
     return TheGraph.factories.menuPorts.createNodeMenuPortsGroup.call(this, containerOptions, containerContents);
   }
-})
+}

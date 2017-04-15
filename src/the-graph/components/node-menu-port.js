@@ -1,9 +1,20 @@
-module.exports = React.createClass({
-  displayName: "TheGraphNodeMenuPort",
-  componentDidMount: function () {
-    ReactDOM.findDOMNode(this).addEventListener("up", this.edgeStart);
-  },
-  edgeStart: function (event) {
+const Component = require('react').Component
+
+module.exports = class TheGraphNodeMenuPort extends Component {
+  get displayName() {
+    return 'TheGraphNodeMenuPort'
+  }
+
+  _addEventListener(node, event, handler, ...args) {
+    node.addEventListener(event, handler.bind(this), ...args);
+  }
+
+  componentDidMount() {
+    var node = ReactDOM.findDOMNode(this)
+    this._addEventListener(node, 'up', this.edgeStart);
+  }
+
+  edgeStart(event) {
     // Don't tap graph
     event.stopPropagation();
 
@@ -21,9 +32,11 @@ module.exports = React.createClass({
       },
       bubbles: true
     });
-    ReactDOM.findDOMNode(this).dispatchEvent(edgeStartEvent);
-  },
-  render: function () {
+    var node = ReactDOM.findDOMNode(this)
+    node.dispatchEvent(edgeStartEvent);
+  }
+
+  render() {
     var labelLen = this.props.label.length;
     var bgWidth = (labelLen > 12 ? labelLen * 8 + 40 : 120);
     // Highlight compatible port
@@ -31,7 +44,7 @@ module.exports = React.createClass({
     var highlight = (highlightPort && highlightPort.isIn === this.props.isIn && highlightPort.type === this.props.port.type);
 
     var rectOptions = {
-      className: "context-port-bg" + (highlight ? " highlight" : ""),
+      className: 'context-port-bg' + (highlight ? ' highlight' : ''),
       x: this.props.x + (this.props.isIn ? -bgWidth : 0),
       y: this.props.y - TheGraph.contextPortSize / 2,
       width: bgWidth
@@ -41,7 +54,7 @@ module.exports = React.createClass({
     var rect = TheGraph.factories.nodeMenuPort.createNodeMenuBackgroundRect.call(this, rectOptions);
 
     var circleOptions = {
-      className: "context-port-hole stroke route" + this.props.route,
+      className: 'context-port-hole stroke route' + this.props.route,
       cx: this.props.x,
       cy: this.props.y,
     };
@@ -49,7 +62,7 @@ module.exports = React.createClass({
     var circle = TheGraph.factories.nodeMenuPort.createNodeMenuPortCircle.call(this, circleOptions);
 
     var textOptions = {
-      className: "context-port-label fill route" + this.props.route,
+      className: 'context-port-label fill route' + this.props.route,
       x: this.props.x + (this.props.isIn ? -20 : 20),
       y: this.props.y,
       children: this.props.label.replace(/(.*)\/(.*)(_.*)\.(.*)/, '$2.$4')
@@ -61,9 +74,9 @@ module.exports = React.createClass({
     var containerContents = [rect, circle, text];
 
     var containerOptions = TheGraph.merge(TheGraph.config.nodeMenuPort.container, {
-      className: "context-port click context-port-" + (this.props.isIn ? "in" : "out")
+      className: 'context-port click context-port-' + (this.props.isIn ? 'in' : 'out')
     });
     return TheGraph.factories.nodeMenuPort.createNodeMenuPortGroup.call(this, containerOptions, containerContents);
 
   }
-})
+}

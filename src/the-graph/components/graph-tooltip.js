@@ -7,7 +7,6 @@ module.exports = class GraphTooltip extends Component {
   }
 
   render() {
-
     var rectOptions = TheGraph.merge(TheGraph.config.tooltip.rect, {
       width: this.props.label.length * 6
     });

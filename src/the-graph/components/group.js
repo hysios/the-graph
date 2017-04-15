@@ -1,26 +1,37 @@
-module.exports = React.createClass({
-  displayName: "TheGraphGroup",
-  componentDidMount: function () {
+const Component = require('react').Component
+
+module.exports = class GraphGroup extends Component {
+  get displayName() {
+    return 'TheGraphGroup'
+  }
+
+  _addEventListener(node, event, handler, ...args) {
+    node.addEventListener(event, handler.bind(this), ...args);
+  }
+
+  componentDidMount() {
     // Move group
     if (this.props.isSelectionGroup) {
       // Drag selection by bg
-      ReactDOM.findDOMNode(this.refs.box).addEventListener("trackstart", this.onTrackStart);
+      var boxNode = ReactDOM.findDOMNode(this.refs.box)
+      this._addEventListener(boxNode, 'track', this.onTrackStart);
     } else {
-      ReactDOM.findDOMNode(this.refs.label).addEventListener("trackstart", this.onTrackStart);
+      var labelNode = ReactDOM.findDOMNode(this.refs.label)
+      this._addEventListener(labelNode, 'track', this.onTrackStart);
     }
 
     var domNode = ReactDOM.findDOMNode(this);
 
     // Don't pan under menu
-    domNode.addEventListener("trackstart", this.dontPan);
+    this._addEventListener(domNode, 'track', this.dontPan);
 
     // Context menu
     if (this.props.showContext) {
-      domNode.addEventListener("contextmenu", this.showContext);
-      domNode.addEventListener("hold", this.showContext);
+      this._addEventListener(domNode, 'contextmenu', this.showContext);
+      this._addEventListener(domNode, 'hold', this.showContext);
     }
-  },
-  showContext: function (event) {
+  }
+  showContext(event) {
     // Don't show native context menu
     event.preventDefault();
 
@@ -37,45 +48,54 @@ module.exports = React.createClass({
     // App.showContext
     this.props.showContext({
       element: this,
-      type: (this.props.isSelectionGroup ? "selection" : "group"),
+      type: (this.props.isSelectionGroup ? 'selection' : 'group'),
       x: x,
       y: y,
       graph: this.props.graph,
       itemKey: this.props.label,
       item: this.props.item
     });
-  },
-  getContext: function (menu, options, hide) {
+  }
+
+  getContext(menu, options, hide) {
     return TheGraph.Menu({
       menu: menu,
       options: options,
       label: this.props.label,
       triggerHideContext: hide
     });
-  },
-  dontPan: function (event) {
+  }
+
+  dontPan(event) {
     // Don't drag under menu
     if (this.props.app.menuShown) {
       event.stopPropagation();
     }
-  },
-  onTrackStart: function (event) {
+  }
+
+  trackHandler(event) {
+    event.stopPropagation();
+    switch (event.detail.state) {
+      case 'start':
+        this.onTrackStart(event);
+        break;
+      case 'track':
+        this.onTrack(event);
+        break;
+      case 'end':
+        this.onTrackEnd(event);
+        break;
+    }
+  }
+
+  onTrackStart(event) {
     // Don't drag graph
     event.stopPropagation();
 
-    if (this.props.isSelectionGroup) {
-      var box = ReactDOM.findDOMNode(this.refs.box);
-      box.addEventListener("track", this.onTrack);
-      box.addEventListener("trackend", this.onTrackEnd);
-    } else {
-      var label = ReactDOM.findDOMNode(this.refs.label);
-      label.addEventListener("track", this.onTrack);
-      label.addEventListener("trackend", this.onTrackEnd);
-    }
-
     this.props.graph.startTransaction('movegroup');
-  },
-  onTrack: function (event) {
+  }
+
+  onTrack(event) {
     // Don't fire on graph
     event.stopPropagation();
 
@@ -83,8 +103,9 @@ module.exports = React.createClass({
     var deltaY = Math.round(event.ddy / this.props.scale);
 
     this.props.triggerMoveGroup(this.props.item.nodes, deltaX, deltaY);
-  },
-  onTrackEnd: function (event) {
+  }
+
+  onTrackEnd(event) {
     // Don't fire on graph
     event.stopPropagation();
 
@@ -96,17 +117,16 @@ module.exports = React.createClass({
 
     if (this.props.isSelectionGroup) {
       var box = ReactDOM.findDOMNode(this.refs.box);
-      box.removeEventListener("track", this.onTrack);
-      box.removeEventListener("trackend", this.onTrackEnd);
+      box.removeEventListener('track', this.onTrack);
     } else {
       var label = ReactDOM.findDOMNode(this.refs.label);
-      label.removeEventListener("track", this.onTrack);
-      label.removeEventListener("trackend", this.onTrackEnd);
+      label.removeEventListener('track', this.onTrack);
     }
 
     this.props.graph.endTransaction('movegroup');
-  },
-  render: function () {
+  }
+
+  render() {
     var x = this.props.minX - TheGraph.config.nodeWidth / 2;
     var y = this.props.minY - TheGraph.config.nodeHeight / 2;
     var color = (this.props.color ? this.props.color : 0);
@@ -116,7 +136,7 @@ module.exports = React.createClass({
       y: y,
       width: this.props.maxX - x + TheGraph.config.nodeWidth * 0.5,
       height: this.props.maxY - y + TheGraph.config.nodeHeight * 0.75,
-      className: "group-box color" + color + selection
+      className: 'group-box color' + color + selection
     };
     boxRectOptions = TheGraph.merge(TheGraph.config.group.boxRect, boxRectOptions);
     var boxRect = TheGraph.factories.group.createGroupBoxRect.call(this, boxRectOptions);
@@ -147,4 +167,4 @@ module.exports = React.createClass({
     return TheGraph.factories.group.createGroupGroup.call(this, containerOptions, groupContents);
 
   }
-})
+}

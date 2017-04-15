@@ -1,6 +1,5 @@
 module.exports = React.createClass({
   displayName: "TheGraphGraph",
-  mixins: [],
   getInitialState: function () {
     return {
       graph: this.props.graph,

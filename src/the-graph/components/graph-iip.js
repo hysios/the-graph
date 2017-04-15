@@ -1,18 +1,24 @@
+const Component = require('react').Component
+
 // Const
 var CURVE = 50;
 
-module.exports = React.createClass({
-  displayName: "TheGraphIIP",
-  shouldComponentUpdate: function (nextProps, nextState) {
-    // Only rerender if changed
+module.exports = class GraphIip extends Component {
+  // static displayName = 'TheGraphEdge';
+  get displayName() {
+    return 'TheGraphIIP'
+  }
 
+  shouldComponentUpdate(nextProps, nextState) {
+    // Only rerender if changed
     return (
       nextProps.x !== this.props.x ||
       nextProps.y !== this.props.y ||
       nextProps.label !== this.props.label
     );
-  },
-  render: function () {
+  }
+
+  render() {
     var x = this.props.x;
     var y = this.props.y;
 
@@ -47,4 +53,4 @@ module.exports = React.createClass({
     });
     return TheGraph.factories.iip.createIIPContainer.call(this, containerOptions, containerContents);
   }
-})
+}

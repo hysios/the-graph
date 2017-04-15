@@ -13597,7 +13597,7 @@ console.log('DONE CONFIGURE')
 console.log('TheGraph', g.TheGraph)
 
 module.exports = g.TheGraph;
-},{"./the-graph-editor/the-graph-editor.js":51,"./the-graph-nav/the-graph-nav.js":52,"./the-graph-thumb/the-graph-thumb.js":53,"./the-graph/font-awesome-unicode-map.js":89,"./the-graph/the-graph-app.js":92,"./the-graph/the-graph-autolayout.js":93,"./the-graph/the-graph-clipboard.js":94,"./the-graph/the-graph-edge.js":95,"./the-graph/the-graph-graph.js":96,"./the-graph/the-graph-group.js":97,"./the-graph/the-graph-iip.js":98,"./the-graph/the-graph-library.js":99,"./the-graph/the-graph-menu.js":100,"./the-graph/the-graph-node-menu-port.js":101,"./the-graph/the-graph-node-menu-ports.js":102,"./the-graph/the-graph-node-menu.js":103,"./the-graph/the-graph-node.js":104,"./the-graph/the-graph-port.js":105,"./the-graph/the-graph-tooltip.js":106,"./the-graph/the-graph.js":107,"fbp-graph":9}],51:[function(require,module,exports){
+},{"./the-graph-editor/the-graph-editor.js":51,"./the-graph-nav/the-graph-nav.js":52,"./the-graph-thumb/the-graph-thumb.js":53,"./the-graph/font-awesome-unicode-map.js":90,"./the-graph/the-graph-app.js":93,"./the-graph/the-graph-autolayout.js":94,"./the-graph/the-graph-clipboard.js":95,"./the-graph/the-graph-edge.js":96,"./the-graph/the-graph-graph.js":97,"./the-graph/the-graph-group.js":98,"./the-graph/the-graph-iip.js":99,"./the-graph/the-graph-library.js":100,"./the-graph/the-graph-menu.js":101,"./the-graph/the-graph-node-menu-port.js":102,"./the-graph/the-graph-node-menu-ports.js":103,"./the-graph/the-graph-node-menu.js":104,"./the-graph/the-graph-node.js":105,"./the-graph/the-graph-port.js":106,"./the-graph/the-graph-tooltip.js":107,"./the-graph/the-graph.js":108,"fbp-graph":9}],51:[function(require,module,exports){
 
 // Returns a new datastructure to prevent accidental sharing between diffent editor instances
 function getDefaultMenus(editor) {
@@ -14187,6 +14187,29 @@ module.exports = {
   makeNewId
 }
 },{}],57:[function(require,module,exports){
+// Point along cubic bezier curve
+// See http://en.wikipedia.org/wiki/File:Bezier_3_big.gif
+module.exports = function findPointOnCubicBezier(p, sx, sy, c1x, c1y, c2x, c2y, ex, ey) {
+  // p is percentage from 0 to 1
+  var op = 1 - p;
+  // 3 green points between 4 points that define curve
+  var g1x = sx * p + c1x * op;
+  var g1y = sy * p + c1y * op;
+  var g2x = c1x * p + c2x * op;
+  var g2y = c1y * p + c2y * op;
+  var g3x = c2x * p + ex * op;
+  var g3y = c2y * p + ey * op;
+  // 2 blue points between green points
+  var b1x = g1x * p + g2x * op;
+  var b1y = g1y * p + g2y * op;
+  var b2x = g2x * p + g3x * op;
+  var b2y = g2y * p + g3y * op;
+  // Point on the curve between blue points
+  var x = b1x * p + b2x * op;
+  var y = b1y * p + b2y * op;
+  return [x, y];
+};
+},{}],58:[function(require,module,exports){
 var mixins = [];
 if (window.React.Animate) {
   mixins.push(React.Animate);
@@ -14798,36 +14821,14 @@ module.exports = TheGraph => {
     }
   })
 }
-},{}],58:[function(require,module,exports){
+},{}],59:[function(require,module,exports){
 const reactMixin = require('react-mixin');
 const Component = require('react').Component
+const findPointOnCubicBezier = require('./edge/bezier')
 
 module.exports = TheGraph => {
   // Const
   var CURVE = TheGraph.config.edge.curve;
-
-  // Point along cubic bezier curve
-  // See http://en.wikipedia.org/wiki/File:Bezier_3_big.gif
-  var findPointOnCubicBezier = function (p, sx, sy, c1x, c1y, c2x, c2y, ex, ey) {
-    // p is percentage from 0 to 1
-    var op = 1 - p;
-    // 3 green points between 4 points that define curve
-    var g1x = sx * p + c1x * op;
-    var g1y = sy * p + c1y * op;
-    var g2x = c1x * p + c2x * op;
-    var g2y = c1y * p + c2y * op;
-    var g3x = c2x * p + ex * op;
-    var g3y = c2y * p + ey * op;
-    // 2 blue points between green points
-    var b1x = g1x * p + g2x * op;
-    var b1y = g1y * p + g2y * op;
-    var b2x = g2x * p + g3x * op;
-    var b2y = g2y * p + g3y * op;
-    // Point on the curve between blue points
-    var x = b1x * p + b2x * op;
-    var y = b1y * p + b2y * op;
-    return [x, y];
-  };
 
   class GraphEdge extends Component {
     // static displayName = 'TheGraphEdge';
@@ -15061,22 +15062,28 @@ module.exports = TheGraph => {
   reactMixin.bindClass(GraphEdge, ToolTipMixin)
   return GraphEdge
 }
-},{"../mixins/tooltip":91,"react":48,"react-mixin":112}],59:[function(require,module,exports){
+},{"../mixins/tooltip":92,"./edge/bezier":57,"react":48,"react-mixin":113}],60:[function(require,module,exports){
+const Component = require('react').Component
+
 // Const
 var CURVE = 50;
 
-module.exports = React.createClass({
-  displayName: "TheGraphIIP",
-  shouldComponentUpdate: function (nextProps, nextState) {
-    // Only rerender if changed
+module.exports = class GraphIip extends Component {
+  // static displayName = 'TheGraphEdge';
+  get displayName() {
+    return 'TheGraphIIP'
+  }
 
+  shouldComponentUpdate(nextProps, nextState) {
+    // Only rerender if changed
     return (
       nextProps.x !== this.props.x ||
       nextProps.y !== this.props.y ||
       nextProps.label !== this.props.label
     );
-  },
-  render: function () {
+  }
+
+  render() {
     var x = this.props.x;
     var y = this.props.y;
 
@@ -15111,8 +15118,8 @@ module.exports = React.createClass({
     });
     return TheGraph.factories.iip.createIIPContainer.call(this, containerOptions, containerContents);
   }
-})
-},{}],60:[function(require,module,exports){
+}
+},{"react":48}],61:[function(require,module,exports){
 const reactMixin = require('react-mixin');
 const Component = require('react').Component
 
@@ -15257,7 +15264,7 @@ module.exports = class GraphMenu extends Component {
 
   }
 }
-},{"react":48,"react-mixin":112}],61:[function(require,module,exports){
+},{"react":48,"react-mixin":113}],62:[function(require,module,exports){
 const reactMixin = require('react-mixin');
 const Component = require('react').Component
 
@@ -15344,7 +15351,7 @@ module.exports = class GraphNodeMenu extends Component {
 
   }
 }
-},{"react":48,"react-mixin":112}],62:[function(require,module,exports){
+},{"react":48,"react-mixin":113}],63:[function(require,module,exports){
 const reactMixin = require('react-mixin');
 const Component = require('react').Component
 
@@ -15851,7 +15858,7 @@ var ToolTipMixin = require('../mixins/tooltip')
 reactMixin.bindClass(GraphNode, ToolTipMixin)
 
 module.exports = GraphNode
-},{"../mixins/tooltip":91,"react":48,"react-mixin":112}],63:[function(require,module,exports){
+},{"../mixins/tooltip":92,"react":48,"react-mixin":113}],64:[function(require,module,exports){
 const reactMixin = require('react-mixin');
 const Component = require('react').Component
 
@@ -16062,7 +16069,7 @@ var ToolTipMixin = require('../mixins/tooltip')
 reactMixin.bindClass(GraphPort, ToolTipMixin)
 
 module.exports = GraphPort
-},{"../mixins/tooltip":91,"react":48,"react-mixin":112}],64:[function(require,module,exports){
+},{"../mixins/tooltip":92,"react":48,"react-mixin":113}],65:[function(require,module,exports){
 const reactMixin = require('react-mixin');
 const Component = require('react').Component
 
@@ -16072,7 +16079,6 @@ module.exports = class GraphTooltip extends Component {
   }
 
   render() {
-
     var rectOptions = TheGraph.merge(TheGraph.config.tooltip.rect, {
       width: this.props.label.length * 6
     });
@@ -16094,10 +16100,9 @@ module.exports = class GraphTooltip extends Component {
 
   }
 }
-},{"react":48,"react-mixin":112}],65:[function(require,module,exports){
+},{"react":48,"react-mixin":113}],66:[function(require,module,exports){
 module.exports = React.createClass({
   displayName: "TheGraphGraph",
-  mixins: [],
   getInitialState: function () {
     return {
       graph: this.props.graph,
@@ -16938,30 +16943,41 @@ module.exports = React.createClass({
 
   }
 })
-},{}],66:[function(require,module,exports){
-module.exports = React.createClass({
-  displayName: "TheGraphGroup",
-  componentDidMount: function () {
+},{}],67:[function(require,module,exports){
+const Component = require('react').Component
+
+module.exports = class GraphGroup extends Component {
+  get displayName() {
+    return 'TheGraphGroup'
+  }
+
+  _addEventListener(node, event, handler, ...args) {
+    node.addEventListener(event, handler.bind(this), ...args);
+  }
+
+  componentDidMount() {
     // Move group
     if (this.props.isSelectionGroup) {
       // Drag selection by bg
-      ReactDOM.findDOMNode(this.refs.box).addEventListener("trackstart", this.onTrackStart);
+      var boxNode = ReactDOM.findDOMNode(this.refs.box)
+      this._addEventListener(boxNode, 'track', this.onTrackStart);
     } else {
-      ReactDOM.findDOMNode(this.refs.label).addEventListener("trackstart", this.onTrackStart);
+      var labelNode = ReactDOM.findDOMNode(this.refs.label)
+      this._addEventListener(labelNode, 'track', this.onTrackStart);
     }
 
     var domNode = ReactDOM.findDOMNode(this);
 
     // Don't pan under menu
-    domNode.addEventListener("trackstart", this.dontPan);
+    this._addEventListener(domNode, 'track', this.dontPan);
 
     // Context menu
     if (this.props.showContext) {
-      domNode.addEventListener("contextmenu", this.showContext);
-      domNode.addEventListener("hold", this.showContext);
+      this._addEventListener(domNode, 'contextmenu', this.showContext);
+      this._addEventListener(domNode, 'hold', this.showContext);
     }
-  },
-  showContext: function (event) {
+  }
+  showContext(event) {
     // Don't show native context menu
     event.preventDefault();
 
@@ -16978,45 +16994,54 @@ module.exports = React.createClass({
     // App.showContext
     this.props.showContext({
       element: this,
-      type: (this.props.isSelectionGroup ? "selection" : "group"),
+      type: (this.props.isSelectionGroup ? 'selection' : 'group'),
       x: x,
       y: y,
       graph: this.props.graph,
       itemKey: this.props.label,
       item: this.props.item
     });
-  },
-  getContext: function (menu, options, hide) {
+  }
+
+  getContext(menu, options, hide) {
     return TheGraph.Menu({
       menu: menu,
       options: options,
       label: this.props.label,
       triggerHideContext: hide
     });
-  },
-  dontPan: function (event) {
+  }
+
+  dontPan(event) {
     // Don't drag under menu
     if (this.props.app.menuShown) {
       event.stopPropagation();
     }
-  },
-  onTrackStart: function (event) {
+  }
+
+  trackHandler(event) {
+    event.stopPropagation();
+    switch (event.detail.state) {
+      case 'start':
+        this.onTrackStart(event);
+        break;
+      case 'track':
+        this.onTrack(event);
+        break;
+      case 'end':
+        this.onTrackEnd(event);
+        break;
+    }
+  }
+
+  onTrackStart(event) {
     // Don't drag graph
     event.stopPropagation();
 
-    if (this.props.isSelectionGroup) {
-      var box = ReactDOM.findDOMNode(this.refs.box);
-      box.addEventListener("track", this.onTrack);
-      box.addEventListener("trackend", this.onTrackEnd);
-    } else {
-      var label = ReactDOM.findDOMNode(this.refs.label);
-      label.addEventListener("track", this.onTrack);
-      label.addEventListener("trackend", this.onTrackEnd);
-    }
-
     this.props.graph.startTransaction('movegroup');
-  },
-  onTrack: function (event) {
+  }
+
+  onTrack(event) {
     // Don't fire on graph
     event.stopPropagation();
 
@@ -17024,8 +17049,9 @@ module.exports = React.createClass({
     var deltaY = Math.round(event.ddy / this.props.scale);
 
     this.props.triggerMoveGroup(this.props.item.nodes, deltaX, deltaY);
-  },
-  onTrackEnd: function (event) {
+  }
+
+  onTrackEnd(event) {
     // Don't fire on graph
     event.stopPropagation();
 
@@ -17037,17 +17063,16 @@ module.exports = React.createClass({
 
     if (this.props.isSelectionGroup) {
       var box = ReactDOM.findDOMNode(this.refs.box);
-      box.removeEventListener("track", this.onTrack);
-      box.removeEventListener("trackend", this.onTrackEnd);
+      box.removeEventListener('track', this.onTrack);
     } else {
       var label = ReactDOM.findDOMNode(this.refs.label);
-      label.removeEventListener("track", this.onTrack);
-      label.removeEventListener("trackend", this.onTrackEnd);
+      label.removeEventListener('track', this.onTrack);
     }
 
     this.props.graph.endTransaction('movegroup');
-  },
-  render: function () {
+  }
+
+  render() {
     var x = this.props.minX - TheGraph.config.nodeWidth / 2;
     var y = this.props.minY - TheGraph.config.nodeHeight / 2;
     var color = (this.props.color ? this.props.color : 0);
@@ -17057,7 +17082,7 @@ module.exports = React.createClass({
       y: y,
       width: this.props.maxX - x + TheGraph.config.nodeWidth * 0.5,
       height: this.props.maxY - y + TheGraph.config.nodeHeight * 0.75,
-      className: "group-box color" + color + selection
+      className: 'group-box color' + color + selection
     };
     boxRectOptions = TheGraph.merge(TheGraph.config.group.boxRect, boxRectOptions);
     var boxRect = TheGraph.factories.group.createGroupBoxRect.call(this, boxRectOptions);
@@ -17088,8 +17113,8 @@ module.exports = React.createClass({
     return TheGraph.factories.group.createGroupGroup.call(this, containerOptions, groupContents);
 
   }
-})
-},{}],67:[function(require,module,exports){
+}
+},{"react":48}],68:[function(require,module,exports){
 module.exports = React.createClass({
   displayName: "TheGraphModalBG",
   componentDidMount: function () {
@@ -17123,13 +17148,24 @@ module.exports = React.createClass({
     return TheGraph.factories.modalBG.createModalBackgroundGroup.call(this, containerOptions, containerContents);
   }
 })
-},{}],68:[function(require,module,exports){
-module.exports = React.createClass({
-  displayName: "TheGraphNodeMenuPort",
-  componentDidMount: function () {
-    ReactDOM.findDOMNode(this).addEventListener("up", this.edgeStart);
-  },
-  edgeStart: function (event) {
+},{}],69:[function(require,module,exports){
+const Component = require('react').Component
+
+module.exports = class TheGraphNodeMenuPort extends Component {
+  get displayName() {
+    return 'TheGraphNodeMenuPort'
+  }
+
+  _addEventListener(node, event, handler, ...args) {
+    node.addEventListener(event, handler.bind(this), ...args);
+  }
+
+  componentDidMount() {
+    var node = ReactDOM.findDOMNode(this)
+    this._addEventListener(node, 'up', this.edgeStart);
+  }
+
+  edgeStart(event) {
     // Don't tap graph
     event.stopPropagation();
 
@@ -17147,9 +17183,11 @@ module.exports = React.createClass({
       },
       bubbles: true
     });
-    ReactDOM.findDOMNode(this).dispatchEvent(edgeStartEvent);
-  },
-  render: function () {
+    var node = ReactDOM.findDOMNode(this)
+    node.dispatchEvent(edgeStartEvent);
+  }
+
+  render() {
     var labelLen = this.props.label.length;
     var bgWidth = (labelLen > 12 ? labelLen * 8 + 40 : 120);
     // Highlight compatible port
@@ -17157,7 +17195,7 @@ module.exports = React.createClass({
     var highlight = (highlightPort && highlightPort.isIn === this.props.isIn && highlightPort.type === this.props.port.type);
 
     var rectOptions = {
-      className: "context-port-bg" + (highlight ? " highlight" : ""),
+      className: 'context-port-bg' + (highlight ? ' highlight' : ''),
       x: this.props.x + (this.props.isIn ? -bgWidth : 0),
       y: this.props.y - TheGraph.contextPortSize / 2,
       width: bgWidth
@@ -17167,7 +17205,7 @@ module.exports = React.createClass({
     var rect = TheGraph.factories.nodeMenuPort.createNodeMenuBackgroundRect.call(this, rectOptions);
 
     var circleOptions = {
-      className: "context-port-hole stroke route" + this.props.route,
+      className: 'context-port-hole stroke route' + this.props.route,
       cx: this.props.x,
       cy: this.props.y,
     };
@@ -17175,7 +17213,7 @@ module.exports = React.createClass({
     var circle = TheGraph.factories.nodeMenuPort.createNodeMenuPortCircle.call(this, circleOptions);
 
     var textOptions = {
-      className: "context-port-label fill route" + this.props.route,
+      className: 'context-port-label fill route' + this.props.route,
       x: this.props.x + (this.props.isIn ? -20 : 20),
       y: this.props.y,
       children: this.props.label.replace(/(.*)\/(.*)(_.*)\.(.*)/, '$2.$4')
@@ -17187,16 +17225,21 @@ module.exports = React.createClass({
     var containerContents = [rect, circle, text];
 
     var containerOptions = TheGraph.merge(TheGraph.config.nodeMenuPort.container, {
-      className: "context-port click context-port-" + (this.props.isIn ? "in" : "out")
+      className: 'context-port click context-port-' + (this.props.isIn ? 'in' : 'out')
     });
     return TheGraph.factories.nodeMenuPort.createNodeMenuPortGroup.call(this, containerOptions, containerContents);
 
   }
-})
-},{}],69:[function(require,module,exports){
-module.exports = React.createClass({
-  displayName: "TheGraphNodeMenuPorts",
-  render: function () {
+}
+},{"react":48}],70:[function(require,module,exports){
+const Component = require('react').Component
+
+module.exports = class TheGraphNodeMenuPorts extends Component {
+  get displayName() {
+    return 'TheGraphNodeMenuPorts'
+  }
+
+  render() {
     var portViews = [];
     var lines = [];
 
@@ -17263,8 +17306,8 @@ module.exports = React.createClass({
     containerOptions = TheGraph.merge(TheGraph.config.nodeMenuPorts.container, containerOptions);
     return TheGraph.factories.menuPorts.createNodeMenuPortsGroup.call(this, containerOptions, containerContents);
   }
-})
-},{}],70:[function(require,module,exports){
+}
+},{"react":48}],71:[function(require,module,exports){
 module.exports = {
   container: {
     className: "the-graph-app",
@@ -17290,7 +17333,7 @@ module.exports = {
     className: "context"
   }
 };
-},{}],71:[function(require,module,exports){
+},{}],72:[function(require,module,exports){
 module.exports = config => {
   return {
     curve: config.nodeSize,
@@ -17310,7 +17353,7 @@ module.exports = config => {
     }
   };
 }
-},{}],72:[function(require,module,exports){
+},{}],73:[function(require,module,exports){
 module.exports = {
   container: {},
   groupsGroup: {
@@ -17349,7 +17392,7 @@ module.exports = {
     label: ""
   }
 };
-},{}],73:[function(require,module,exports){
+},{}],74:[function(require,module,exports){
 module.exports = {
   container: {
     className: "iip"
@@ -17363,7 +17406,7 @@ module.exports = {
     halign: "right"
   }
 };
-},{}],74:[function(require,module,exports){
+},{}],75:[function(require,module,exports){
 module.exports = config => {
   return {
     radius: 72,
@@ -17421,7 +17464,7 @@ module.exports = config => {
     }
   };
 }
-},{}],75:[function(require,module,exports){
+},{}],76:[function(require,module,exports){
 module.exports = {
   container: {
     className: "context-node"
@@ -17433,7 +17476,7 @@ module.exports = {
     y: 0
   }
 };
-},{}],76:[function(require,module,exports){
+},{}],77:[function(require,module,exports){
 module.exports = (config) => {
   return {
     snap: config.nodeSize,
@@ -17486,7 +17529,7 @@ module.exports = (config) => {
     }
   }
 }
-},{}],77:[function(require,module,exports){
+},{}],78:[function(require,module,exports){
 module.exports = {
   container: {
     className: "port arrow"
@@ -17505,7 +17548,7 @@ module.exports = {
     className: "port-label drag"
   }
 };
-},{}],78:[function(require,module,exports){
+},{}],79:[function(require,module,exports){
 module.exports = {
   container: {},
   rect: {
@@ -17521,7 +17564,7 @@ module.exports = {
     ref: "label"
   }
 };
-},{}],79:[function(require,module,exports){
+},{}],80:[function(require,module,exports){
 module.exports = TheGraph => {
   return {
     createAppContainer: createAppContainer,
@@ -17557,7 +17600,7 @@ module.exports = TheGraph => {
     return TheGraph.ModalBG(options);
   }
 }
-},{}],80:[function(require,module,exports){
+},{}],81:[function(require,module,exports){
 function createEdgePathArray(sourceX, sourceY,
   c1X, c1Y, c2X, c2Y,
   targetX, targetY) {
@@ -17581,7 +17624,7 @@ module.exports = factories => {
     createArrow: factories.createPolygon
   };
 }
-},{}],81:[function(require,module,exports){
+},{}],82:[function(require,module,exports){
 module.exports = TheGraph => {
   function createGraphNode(options) {
     return TheGraph.Node(options);
@@ -17618,7 +17661,7 @@ module.exports = TheGraph => {
     createGraphEdgePreview: createGraphEdgePreview
   };
 }
-},{}],82:[function(require,module,exports){
+},{}],83:[function(require,module,exports){
 module.exports = config => {
   return {
     container: {
@@ -17638,7 +17681,7 @@ module.exports = config => {
     }
   };
 }
-},{}],83:[function(require,module,exports){
+},{}],84:[function(require,module,exports){
 module.exports = TheGraph => {
   return {
     createIIPContainer: TheGraph.factories.createGroup,
@@ -17650,7 +17693,7 @@ module.exports = TheGraph => {
     return TheGraph.TextBG(options);
   }
 }
-},{}],84:[function(require,module,exports){
+},{}],85:[function(require,module,exports){
 module.exports = TheGraph => {
   function createMenuSlice(options) {
     /*jshint validthis:true */
@@ -17717,7 +17760,7 @@ module.exports = TheGraph => {
     createMenuMiddleIconText: TheGraph.factories.createText
   };
 }
-},{}],85:[function(require,module,exports){
+},{}],86:[function(require,module,exports){
 module.exports = TheGraph => {
   function createNodeMenuPorts(options) {
     return TheGraph.NodeMenuPorts(options);
@@ -17734,7 +17777,7 @@ module.exports = TheGraph => {
     createNodeMenuMenu: createNodeMenuMenu
   };
 }
-},{}],86:[function(require,module,exports){
+},{}],87:[function(require,module,exports){
 module.exports = TheGraph => {
   function createNodePort(options) {
     // console.log('createNodePort', options)
@@ -17759,7 +17802,7 @@ module.exports = TheGraph => {
     createNodePort: createNodePort
   };
 }
-},{}],87:[function(require,module,exports){
+},{}],88:[function(require,module,exports){
 module.exports = factories => {
   return {
     createPortGroup: factories.createGroup,
@@ -17769,7 +17812,7 @@ module.exports = factories => {
     createPortLabelText: factories.createText
   };
 }
-},{}],88:[function(require,module,exports){
+},{}],89:[function(require,module,exports){
 module.exports = factories => {
   return {
     createTooltipGroup: factories.createGroup,
@@ -17777,7 +17820,7 @@ module.exports = factories => {
     createTooltipText: factories.createText
   };
 }
-},{}],89:[function(require,module,exports){
+},{}],90:[function(require,module,exports){
 /*
   this file is generated via `grunt build` 
 */
@@ -18574,7 +18617,7 @@ context.TheGraph.FONT_AWESOME = {
 };
 
 };
-},{}],90:[function(require,module,exports){
+},{}],91:[function(require,module,exports){
 module.exports = function (TheGraph) {
   TheGraph.config.modalBG = {
     container: {},
@@ -18592,7 +18635,7 @@ module.exports = function (TheGraph) {
   const ModalBg = require('../components/menu/modal-bg')
   TheGraph.ModalBG = React.createFactory(ModalBg);
 }
-},{"../components/menu/modal-bg":67}],91:[function(require,module,exports){
+},{"../components/menu/modal-bg":68}],92:[function(require,module,exports){
 module.exports = {
   showTooltip: function (event) {
     if (!this.shouldShowTooltip()) {
@@ -18633,7 +18676,7 @@ module.exports = {
     tooltipper.addEventListener("mouseleave", this.hideTooltip);
   }
 };
-},{}],92:[function(require,module,exports){
+},{}],93:[function(require,module,exports){
 module.exports.register = function (context) {
 
   var TheGraph = context.TheGraph;
@@ -18648,7 +18691,7 @@ module.exports.register = function (context) {
   const GraphApp = require('./components/graph-app')(TheGraph)
   TheGraph.App = React.createFactory(GraphApp);
 };
-},{"./components/graph-app":57,"./config/app":70,"./factories/app":79}],93:[function(require,module,exports){
+},{"./components/graph-app":58,"./config/app":71,"./factories/app":80}],94:[function(require,module,exports){
 
 // NOTE: caller should wrap in a graph transaction, to group all changes made to @graph
 function applyAutolayout(graph, keilerGraph, props) {
@@ -18706,7 +18749,7 @@ module.exports = {
   applyToGraph: applyAutolayout,
 };
 
-},{}],94:[function(require,module,exports){
+},{}],95:[function(require,module,exports){
 /**
  * Created by mpricope on 05.09.14.
  */
@@ -18722,7 +18765,7 @@ module.exports.register = function (context) {
   TheGraph.Clipboard.paste = require('./clipboard/paste')
 
 };
-},{"./clipboard/copy":54,"./clipboard/paste":55}],95:[function(require,module,exports){
+},{"./clipboard/copy":54,"./clipboard/paste":55}],96:[function(require,module,exports){
 module.exports.register = function (context) {
 
   var TheGraph = context.TheGraph;
@@ -18735,7 +18778,7 @@ module.exports.register = function (context) {
   const GraphEdge = require('./components/graph-edge')(TheGraph)
   TheGraph.Edge = React.createFactory(GraphEdge);
 };
-},{"./components/graph-edge":58,"./config/edge":71,"./factories/edge":80}],96:[function(require,module,exports){
+},{"./components/graph-edge":59,"./config/edge":72,"./factories/edge":81}],97:[function(require,module,exports){
 module.exports.register = function (context) {
 
   var TheGraph = context.TheGraph;
@@ -18747,7 +18790,7 @@ module.exports.register = function (context) {
   const Graph = require('./components/graph')
   TheGraph.Graph = React.createFactory(Graph);
 };
-},{"./components/graph":65,"./config/graph":72,"./factories/graph":81}],97:[function(require,module,exports){
+},{"./components/graph":66,"./config/graph":73,"./factories/graph":82}],98:[function(require,module,exports){
 module.exports.register = function (context) {
 
   var TheGraph = context.TheGraph;
@@ -18764,7 +18807,7 @@ module.exports.register = function (context) {
   const Group = require('./components/group')
   TheGraph.Group = React.createFactory(Group);
 };
-},{"./components/group":66,"./factories/group":82}],98:[function(require,module,exports){
+},{"./components/group":67,"./factories/group":83}],99:[function(require,module,exports){
 module.exports.register = function (context) {
 
   var TheGraph = context.TheGraph;
@@ -18776,7 +18819,7 @@ module.exports.register = function (context) {
   const GraphIip = require('./components/graph-iip')
   TheGraph.IIP = React.createFactory(GraphIip);
 };
-},{"./components/graph-iip":59,"./config/iip":73,"./factories/iip":83}],99:[function(require,module,exports){
+},{"./components/graph-iip":60,"./config/iip":74,"./factories/iip":84}],100:[function(require,module,exports){
 // Component library functionality
 function mergeComponentDefinition(component, definition) {
   // In cases where a component / subgraph ports change,
@@ -18926,7 +18969,7 @@ module.exports = {
   componentsFromGraph: componentsFromGraph,
 };
 
-},{}],100:[function(require,module,exports){
+},{}],101:[function(require,module,exports){
 module.exports.register = function (context) {
 
   var TheGraph = context.TheGraph;
@@ -18939,7 +18982,7 @@ module.exports.register = function (context) {
 
   require('./menu/modal-bg')(TheGraph)
 };
-},{"./components/graph-menu":60,"./config/menu":74,"./factories/menu":84,"./menu/modal-bg":90}],101:[function(require,module,exports){
+},{"./components/graph-menu":61,"./config/menu":75,"./factories/menu":85,"./menu/modal-bg":91}],102:[function(require,module,exports){
 module.exports.register = function (context) {
 
   var TheGraph = context.TheGraph;
@@ -18967,7 +19010,7 @@ module.exports.register = function (context) {
   const NodeMenuPort = require('./components/node-menu-port')
   TheGraph.NodeMenuPort = React.createFactory(NodeMenuPort);
 };
-},{"./components/node-menu-port":68}],102:[function(require,module,exports){
+},{"./components/node-menu-port":69}],103:[function(require,module,exports){
 module.exports.register = function (context) {
 
   var TheGraph = context.TheGraph;
@@ -19001,7 +19044,7 @@ module.exports.register = function (context) {
   const NodeMenuPorts = require('./components/node-menu-ports')
   TheGraph.NodeMenuPorts = React.createFactory(NodeMenuPorts);
 };
-},{"./components/node-menu-ports":69}],103:[function(require,module,exports){
+},{"./components/node-menu-ports":70}],104:[function(require,module,exports){
 module.exports.register = function (context) {
 
   var TheGraph = context.TheGraph;
@@ -19012,7 +19055,7 @@ module.exports.register = function (context) {
   const GraphNodeMenu = require('./components/graph-node-menu')
   TheGraph.NodeMenu = React.createFactory(GraphNodeMenu);
 };
-},{"./components/graph-node-menu":61,"./config/node-menu":75,"./factories/node-menu":85}],104:[function(require,module,exports){
+},{"./components/graph-node-menu":62,"./config/node-menu":76,"./factories/node-menu":86}],105:[function(require,module,exports){
 module.exports.register = function (context) {
 
   var TheGraph = context.TheGraph;
@@ -19034,7 +19077,7 @@ module.exports.register = function (context) {
   // Node view
   TheGraph.Node = React.createFactory(GraphNode);
 };
-},{"./components/graph-node":62,"./config/node":76,"./factories/node":86}],105:[function(require,module,exports){
+},{"./components/graph-node":63,"./config/node":77,"./factories/node":87}],106:[function(require,module,exports){
 module.exports.register = function (context) {
 
   var TheGraph = context.TheGraph;
@@ -19047,7 +19090,7 @@ module.exports.register = function (context) {
   const GraphPort = require('./components/graph-port')
   TheGraph.Port = React.createFactory(GraphPort);
 };
-},{"./components/graph-port":63,"./config/port":77,"./factories/port":87}],106:[function(require,module,exports){
+},{"./components/graph-port":64,"./config/port":78,"./factories/port":88}],107:[function(require,module,exports){
 module.exports.register = function (context) {
   var TheGraph = context.TheGraph;
   TheGraph.config.tooltip = require('./config/tooltip')
@@ -19057,7 +19100,7 @@ module.exports.register = function (context) {
   const GraphTooltip = require('./components/graph-tooltip')
   TheGraph.Tooltip = React.createFactory(GraphTooltip);
 };
-},{"./components/graph-tooltip":64,"./config/tooltip":78,"./factories/tooltip":88}],107:[function(require,module,exports){
+},{"./components/graph-tooltip":65,"./config/tooltip":79,"./factories/tooltip":89}],108:[function(require,module,exports){
 module.exports.register = function (context) {
 
   var defaultNodeSize = 72;
@@ -19116,7 +19159,7 @@ module.exports.register = function (context) {
   const TextBg = require('./the-graph/text-bg')
   TheGraph.TextBG = React.createFactory(TextBg);
 };
-},{"./mixins/tooltip":91,"./the-graph/factories":108,"./the-graph/svg-image":109,"./the-graph/text-bg":110,"./the-graph/utils":111}],108:[function(require,module,exports){
+},{"./mixins/tooltip":92,"./the-graph/factories":109,"./the-graph/svg-image":110,"./the-graph/text-bg":111,"./the-graph/utils":112}],109:[function(require,module,exports){
 module.exports = TheGraph => {
   TheGraph.factories.createGroup = function (options, content) {
     var args = [options];
@@ -19167,7 +19210,7 @@ module.exports = TheGraph => {
     return React.DOM.svg.apply(React.DOM.svg, args);
   };
 }
-},{}],109:[function(require,module,exports){
+},{}],110:[function(require,module,exports){
 module.exports = React.createClass({
   displayName: "TheGraphSVGImage",
   render: function () {
@@ -19187,7 +19230,7 @@ module.exports = React.createClass({
     });
   }
 })
-},{}],110:[function(require,module,exports){
+},{}],111:[function(require,module,exports){
 module.exports = React.createClass({
   displayName: "TheGraphTextBG",
   render: function () {
@@ -19234,7 +19277,7 @@ module.exports = React.createClass({
     );
   }
 })
-},{}],111:[function(require,module,exports){
+},{}],112:[function(require,module,exports){
 module.exports = TheGraph => {
   TheGraph.findMinMax = function (graph, nodes) {
     // console.log('findMinMax', graph)
@@ -19511,7 +19554,7 @@ module.exports = TheGraph => {
   };
 
 }
-},{}],112:[function(require,module,exports){
+},{}],113:[function(require,module,exports){
 var mixin = require('smart-mixin');
 var assign = require('object-assign');
 
@@ -19694,9 +19737,9 @@ module.exports = (function () {
 
   return reactMixin;
 })();
-},{"object-assign":113,"smart-mixin":114}],113:[function(require,module,exports){
+},{"object-assign":114,"smart-mixin":115}],114:[function(require,module,exports){
 arguments[4][18][0].apply(exports,arguments)
-},{"dup":18}],114:[function(require,module,exports){
+},{"dup":18}],115:[function(require,module,exports){
 function objToStr(x){ return Object.prototype.toString.call(x); };
 
 function returner(x) { return x; }
